@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel — Appointment Manager</title>
+<style>
+:root {
+  --teal:#097C87; --teal-dark:#065E68; --cyan:#23CED9; --cyan-light:#E6F9FA;
+  --peach:#FCA47C; --yellow:#F9D77B; --border:#cde8ea; --bg:#F2FAFA;
+  --white:#fff; --text:#1a1a1a; --muted:#4a5a5c;
+  --shadow:0 4px 16px rgba(9,124,135,.14);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text);min-height:100vh;}
+a{color:inherit;text-decoration:none;}
+
+/* ── AUTH OVERLAY ── */
+#authOverlay{position:fixed;inset:0;background:linear-gradient(135deg,#065E68,#097C87);display:flex;align-items:center;justify-content:center;z-index:9999;}
+.auth-box{background:#fff;border-radius:20px;padding:3rem 2.5rem;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center;}
+.auth-box h1{font-size:1.5rem;font-weight:900;color:var(--teal-dark);margin-bottom:.3rem;}
+.auth-box p{font-size:.88rem;color:var(--muted);margin-bottom:1.5rem;}
+.auth-input{width:100%;padding:.85rem 1.2rem;border:2px solid var(--border);border-radius:10px;font-size:.95rem;outline:none;transition:border-color .2s;display:block;}
+.auth-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(35,206,217,.15);}
+.auth-btn{width:100%;margin-top:.75rem;padding:1rem;background:linear-gradient(135deg,var(--teal),var(--cyan));color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:800;cursor:pointer;transition:all .3s;letter-spacing:.02em;}
+.auth-btn:hover{opacity:.9;transform:translateY(-1px);}
+.auth-err{color:#ef4444;font-size:.84rem;margin-top:.75rem;display:none;padding:.5rem .75rem;background:rgba(239,68,68,.08);border-radius:8px;border:1px solid rgba(239,68,68,.2);}
+
+/* ── LAYOUT ── */
+.topbar{background:linear-gradient(90deg,#065E68,#097C87);color:#fff;padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow);}
+.topbar-brand{font-size:1.2rem;font-weight:900;display:flex;align-items:center;gap:.6rem;}
+.topbar-brand span{background:var(--peach);color:#fff;padding:.2rem .7rem;border-radius:50px;font-size:.75rem;font-weight:800;}
+.topbar-actions{display:flex;gap:.8rem;align-items:center;}
+.tbar-btn{padding:.55rem 1.2rem;border-radius:50px;border:none;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s;}
+.tbar-btn.outline{background:transparent;border:2px solid rgba(255,255,255,.4);color:#fff;}
+.tbar-btn.outline:hover{border-color:#fff;background:rgba(255,255,255,.1);}
+.tbar-btn.danger{background:#ef4444;color:#fff;}
+.tbar-btn.danger:hover{background:#dc2626;}
+.tbar-btn.primary{background:var(--yellow);color:var(--teal-dark);}
+.tbar-btn.primary:hover{background:#f0c830;}
+
+.main-nav{display:flex;background:#fff;border-bottom:2px solid var(--border);padding:0 2rem;gap:0;}
+.nav-btn{padding:.9rem 1.4rem;border:none;background:transparent;font-size:.9rem;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;}
+.nav-btn.active{color:var(--teal-dark);border-bottom-color:var(--cyan);}
+.nav-btn:hover{color:var(--teal);}
+
+.content{padding:2rem;max-width:1200px;margin:0 auto;}
+
+/* ── CARDS ── */
+.card{background:#fff;border:2px solid var(--border);border-radius:16px;padding:1.8rem;margin-bottom:1.5rem;box-shadow:var(--shadow);}
+.card h2{font-size:1.1rem;font-weight:800;color:var(--teal-dark);margin-bottom:1.5rem;padding-bottom:.8rem;border-bottom:2px solid var(--cyan-light);display:flex;align-items:center;gap:.6rem;}
+
+/* ── APPOINTMENTS TABLE ── */
+.appt-table{width:100%;border-collapse:collapse;font-size:.9rem;}
+.appt-table th{background:var(--bg);color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;padding:.75rem 1rem;text-align:left;border-bottom:2px solid var(--border);}
+.appt-table td{padding:.9rem 1rem;border-bottom:1px solid var(--border);vertical-align:middle;}
+.appt-table tr:last-child td{border-bottom:none;}
+.appt-table tr:hover td{background:var(--cyan-light);}
+.badge{display:inline-block;padding:.25rem .75rem;border-radius:50px;font-size:.75rem;font-weight:800;text-transform:uppercase;}
+.badge-pending{background:rgba(249,215,123,.25);color:#b45309;border:1.5px solid #F9D77B;}
+.badge-approved{background:rgba(34,197,94,.15);color:#166534;border:1.5px solid #86efac;}
+.badge-declined{background:rgba(239,68,68,.12);color:#991b1b;border:1.5px solid #fca5a5;}
+.action-btns{display:flex;gap:.5rem;flex-wrap:wrap;}
+.action-btn{padding:.4rem .9rem;border-radius:8px;border:none;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .2s;}
+.action-btn.approve{background:rgba(34,197,94,.15);color:#166534;border:1.5px solid #86efac;}
+.action-btn.approve:hover{background:#22c55e;color:#fff;}
+.action-btn.decline{background:rgba(239,68,68,.12);color:#991b1b;border:1.5px solid #fca5a5;}
+.action-btn.decline:hover{background:#ef4444;color:#fff;}
+.action-btn.send-link{background:linear-gradient(135deg,var(--teal),var(--cyan));color:#fff;}
+.action-btn.send-link:hover{opacity:.85;}
+.empty-state{text-align:center;padding:3rem;color:var(--muted);font-size:.95rem;}
+.empty-state svg{margin-bottom:1rem;opacity:.3;}
+
+/* ── SCHEDULE EDITOR ── */
+.schedule-editor{display:flex;flex-direction:column;gap:1.2rem;}
+.day-editor{background:var(--bg);border:2px solid var(--border);border-radius:12px;padding:1.2rem;}
+.day-editor-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+.day-label{font-weight:800;font-size:.95rem;color:var(--teal-dark);}
+.day-toggle{display:flex;align-items:center;gap:.5rem;font-size:.85rem;color:var(--muted);}
+.toggle-sw{width:42px;height:24px;background:#ddd;border-radius:50px;position:relative;cursor:pointer;transition:background .2s;}
+.toggle-sw.on{background:var(--cyan);}
+.toggle-sw::after{content:'';position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.2);}
+.toggle-sw.on::after{transform:translateX(18px);}
+.slots-list{display:flex;flex-direction:column;gap:.6rem;}
+.slot-row{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;}
+.slot-row input[type=time]{padding:.5rem .75rem;border:2px solid var(--border);border-radius:8px;font-size:.9rem;outline:none;transition:border-color .2s;}
+.slot-row input[type=time]:focus{border-color:var(--cyan);}
+.slot-sep{font-size:.85rem;color:var(--muted);font-weight:700;}
+.slot-remove{background:rgba(239,68,68,.12);color:#dc2626;border:1.5px solid #fca5a5;border-radius:8px;padding:.4rem .75rem;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .2s;}
+.slot-remove:hover{background:#ef4444;color:#fff;}
+.add-slot-btn{background:rgba(9,124,135,.1);color:var(--teal-dark);border:2px dashed var(--cyan);border-radius:8px;padding:.5rem 1rem;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s;width:100%;}
+.add-slot-btn:hover{background:var(--cyan-light);}
+.save-schedule-btn{background:linear-gradient(135deg,var(--teal),var(--cyan-dark));color:#fff;border:none;border-radius:12px;padding:.9rem 2rem;font-size:.95rem;font-weight:800;cursor:pointer;transition:all .3s;box-shadow:0 4px 14px rgba(9,124,135,.3);}
+.save-schedule-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(9,124,135,.4);}
+.save-notice{display:none;background:rgba(34,197,94,.15);border:1.5px solid #86efac;color:#166534;padding:.75rem 1.2rem;border-radius:10px;font-size:.88rem;font-weight:700;margin-top:1rem;}
+
+/* ── SEND LINK MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);z-index:999;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:#fff;border-radius:20px;padding:2rem;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.modal-box h3{font-size:1.1rem;font-weight:800;color:var(--teal-dark);margin-bottom:1.2rem;}
+.modal-form-group{margin-bottom:1rem;}
+.modal-form-group label{display:block;font-size:.82rem;font-weight:700;color:var(--muted);margin-bottom:.35rem;text-transform:uppercase;}
+.modal-form-group input,.modal-form-group textarea{width:100%;padding:.75rem 1rem;border:2px solid var(--border);border-radius:10px;font-size:.9rem;outline:none;font-family:inherit;transition:border-color .2s;}
+.modal-form-group input:focus,.modal-form-group textarea:focus{border-color:var(--cyan);}
+.modal-form-group textarea{resize:vertical;min-height:80px;}
+.modal-actions{display:flex;gap:.75rem;justify-content:flex-end;margin-top:1.5rem;}
+.modal-btn{padding:.7rem 1.5rem;border-radius:10px;border:none;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .2s;}
+.modal-btn.cancel{background:var(--bg);color:var(--muted);border:2px solid var(--border);}
+.modal-btn.cancel:hover{border-color:var(--muted);}
+.modal-btn.send{background:linear-gradient(135deg,var(--teal),var(--cyan-dark));color:#fff;box-shadow:0 4px 12px rgba(9,124,135,.3);}
+.modal-btn.send:hover{opacity:.9;}
+
+/* ── STATS GRID ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.5rem;}
+.stat-box{background:linear-gradient(135deg,#065E68,#097C87);color:#fff;border-radius:14px;padding:1.4rem;text-align:center;}
+.stat-box-num{font-size:2.2rem;font-weight:900;color:var(--yellow);}
+.stat-box-label{font-size:.8rem;opacity:.85;margin-top:.3rem;font-weight:600;}
+</style>
+</head>
+<body>
+
+<!-- Auth Overlay -->
+<div id="authOverlay">
+  <div class="auth-box">
+    <div style="width:60px;height:60px;background:linear-gradient(135deg,#065E68,#23CED9);border-radius:16px;margin:0 auto 1.2rem;display:flex;align-items:center;justify-content:center;">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="white"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+    </div>
+    <h1>Admin Login</h1>
+    <p>Sign in to manage your appointments &amp; schedule</p>
+    <input class="auth-input" type="text" id="authUser" placeholder="Username" onkeydown="if(event.key==='Enter')document.getElementById('authPass').focus()" style="margin-bottom:.75rem;">
+    <input class="auth-input" type="password" id="authPass" placeholder="Password" onkeydown="if(event.key==='Enter')checkAuth()">
+    <button class="auth-btn" onclick="checkAuth()">Sign In</button>
+    <div class="auth-err" id="authErr">Incorrect username or password.</div>
+  </div>
+</div>
+
+<!-- Top Bar -->
+<div class="topbar">
+  <div class="topbar-brand">
+    Md Hasibuzzaman — Admin
+    <span>Appointment Manager</span>
+  </div>
+  <div class="topbar-actions">
+    <a href="index.html#contact" class="tbar-btn outline">Back to Site</a>
+    <button class="tbar-btn danger" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<!-- Nav -->
+<div class="main-nav">
+  <button class="nav-btn active" onclick="showAdminTab('appointments',this)">Appointments</button>
+  <button class="nav-btn" onclick="showAdminTab('schedule',this)">Schedule</button>
+</div>
+
+<div class="content" id="adminContent">
+
+  <!-- Appointments Tab -->
+  <div id="atab-appointments">
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="card">
+      <h2>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:var(--cyan)"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+        Appointment Requests
+      </h2>
+      <div id="apptTableWrap"></div>
+    </div>
+  </div>
+
+  <!-- Schedule Tab -->
+  <div id="atab-schedule" style="display:none;">
+    <div class="card">
+      <h2>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:var(--cyan)"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+        Weekly Availability Schedule
+      </h2>
+      <p style="font-size:.88rem;color:var(--muted);margin-bottom:1.5rem;">
+        Configure your available time slots. Changes are saved to the browser and reflected on your website's appointment booking page.
+      </p>
+      <div class="schedule-editor" id="scheduleEditor"></div>
+      <div style="margin-top:1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <button class="save-schedule-btn" onclick="saveSchedule()">Save Schedule</button>
+        <button class="modal-btn cancel" onclick="resetSchedule()">Reset to Default</button>
+      </div>
+      <div class="save-notice" id="saveNotice">Schedule saved successfully! Changes are live on your website.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Send Meet Link Modal -->
+<div class="modal-overlay" id="sendLinkModal">
+  <div class="modal-box">
+    <h3>Send Google Meet Link</h3>
+    <div class="modal-form-group">
+      <label>Requester Email</label>
+      <input type="email" id="modalEmail" readonly>
+    </div>
+    <div class="modal-form-group">
+      <label>Google Meet Link *</label>
+      <input type="url" id="modalMeetLink" placeholder="https://meet.google.com/xxx-xxxx-xxx">
+    </div>
+    <div class="modal-form-group">
+      <label>Appointment Date &amp; Time</label>
+      <input type="text" id="modalDateTime" readonly>
+    </div>
+    <div class="modal-form-group">
+      <label>Personal Note (optional)</label>
+      <textarea id="modalNote" placeholder="Add a personal message to the requester..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn send" onclick="sendMeetLink()">Send Meet Link</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+// ── CONFIG — keep in sync with index.html ──
+const ADMIN_USERNAME       = 'Hz4050#@';
+const ADMIN_PASSWORD       = 'Hz3098#@';
+const EMAILJS_PUBLIC_KEY   = 'YOUR_EMAILJS_PUBLIC_KEY';
+const EMAILJS_SERVICE_ID   = 'YOUR_SERVICE_ID';
+const EMAILJS_TEMPLATE_CON = 'YOUR_CONFIRM_TEMPLATE_ID';
+
+emailjs.init(EMAILJS_PUBLIC_KEY);
+
+// ── AUTH ──
+function checkAuth() {
+  const user = document.getElementById('authUser').value.trim();
+  const pw   = document.getElementById('authPass').value;
+  const errEl = document.getElementById('authErr');
+  if (user === ADMIN_USERNAME && pw === ADMIN_PASSWORD) {
+    document.getElementById('authOverlay').style.display = 'none';
+    sessionStorage.setItem('admin_auth', '1');
+    errEl.style.display = 'none';
+    init();
+  } else {
+    errEl.style.display = 'block';
+    document.getElementById('authPass').value = '';
+  }
+}
+function logout() {
+  sessionStorage.removeItem('admin_auth');
+  location.reload();
+}
+if (sessionStorage.getItem('admin_auth') === '1') {
+  document.getElementById('authOverlay').style.display = 'none';
+  init();
+}
+
+// ── ADMIN NAV ──
+function showAdminTab(tab, btn) {
+  document.querySelectorAll('[id^=atab-]').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('atab-' + tab).style.display = 'block';
+  if (btn) btn.classList.add('active');
+  if (tab === 'schedule') renderScheduleEditor();
+}
+
+// ── DEFAULT SCHEDULE ──
+// Mon–Tue: 9AM–6PM | Wed–Thu: 11AM–12PM | Fri: 10AM–6PM | Sat–Sun: 9AM–12PM & 3PM–4PM
+const DEFAULT_SCHEDULE = {
+  1: { name:'Monday',    slots:[{start:'09:00',end:'18:00'}] },
+  2: { name:'Tuesday',   slots:[{start:'09:00',end:'18:00'}] },
+  3: { name:'Wednesday', slots:[{start:'11:00',end:'12:00'}] },
+  4: { name:'Thursday',  slots:[{start:'11:00',end:'12:00'}] },
+  5: { name:'Friday',    slots:[{start:'10:00',end:'18:00'}] },
+  6: { name:'Saturday',  slots:[{start:'09:00',end:'12:00'},{start:'15:00',end:'16:00'}] },
+  0: { name:'Sunday',    slots:[{start:'09:00',end:'12:00'},{start:'15:00',end:'16:00'}] }
+};
+
+function getSchedule() {
+  const stored = localStorage.getItem('appt_schedule');
+  if (!stored) return JSON.parse(JSON.stringify(DEFAULT_SCHEDULE));
+  // Migrate: if old schedule has empty Sat/Sun, replace with new defaults
+  try {
+    const parsed = JSON.parse(stored);
+    const sat = parsed[6]; const sun = parsed[0];
+    const isOldDefault = (!sat || !sat.slots || sat.slots.length === 0) &&
+                         (!sun || !sun.slots || sun.slots.length === 0);
+    if (isOldDefault) {
+      localStorage.removeItem('appt_schedule');
+      return JSON.parse(JSON.stringify(DEFAULT_SCHEDULE));
+    }
+    return parsed;
+  } catch(e) { return JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)); }
+}
+
+function init() {
+  renderAppointments();
+  renderStats();
+}
+
+// ── APPOINTMENTS ──
+function getAppointments() {
+  return JSON.parse(localStorage.getItem('appt_pending') || '[]');
+}
+function saveAppointments(list) {
+  localStorage.setItem('appt_pending', JSON.stringify(list));
+}
+
+function renderStats() {
+  const apts = getAppointments();
+  const pending  = apts.filter(a => a.status === 'pending').length;
+  const approved = apts.filter(a => a.status === 'approved').length;
+  const declined = apts.filter(a => a.status === 'declined').length;
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-box"><div class="stat-box-num">${apts.length}</div><div class="stat-box-label">Total Requests</div></div>
+    <div class="stat-box"><div class="stat-box-num" style="color:#F9D77B">${pending}</div><div class="stat-box-label">Pending</div></div>
+    <div class="stat-box"><div class="stat-box-num" style="color:#86efac">${approved}</div><div class="stat-box-label">Approved</div></div>
+    <div class="stat-box"><div class="stat-box-num" style="color:#fca5a5">${declined}</div><div class="stat-box-label">Declined</div></div>
+  `;
+}
+
+function renderAppointments() {
+  const apts = getAppointments().slice().reverse();
+  const wrap = document.getElementById('apptTableWrap');
+  if (apts.length === 0) {
+    wrap.innerHTML = `<div class="empty-state">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+      <p>No appointment requests yet.</p>
+    </div>`;
+    return;
+  }
+  wrap.innerHTML = `<table class="appt-table">
+    <thead><tr>
+      <th>ID</th><th>Name</th><th>Email</th><th>Date</th><th>Time</th><th>Purpose</th><th>Status</th><th>Actions</th>
+    </tr></thead>
+    <tbody>
+    ${apts.map(a => `<tr>
+      <td style="font-size:.78rem;color:var(--muted);font-family:monospace">${a.id}</td>
+      <td><strong>${esc(a.name)}</strong></td>
+      <td><a href="mailto:${esc(a.email)}" style="color:var(--teal)">${esc(a.email)}</a></td>
+      <td>${formatDate(a.date)}</td>
+      <td>${esc(a.timeRange)}</td>
+      <td>${esc(a.purpose)}</td>
+      <td><span class="badge badge-${a.status}">${a.status}</span></td>
+      <td>
+        <div class="action-btns">
+          ${a.status === 'pending' ? `
+            <button class="action-btn approve" onclick="approveAppt('${a.id}')">Approve</button>
+            <button class="action-btn decline" onclick="declineAppt('${a.id}')">Decline</button>
+          ` : ''}
+          ${a.status !== 'declined' ? `
+            <button class="action-btn send-link" onclick="openSendLink('${a.id}')">Send Meet Link</button>
+          ` : ''}
+        </div>
+      </td>
+    </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function formatDate(d) {
+  if (!d) return '';
+  const obj = new Date(d + 'T00:00:00');
+  return obj.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+}
+
+function approveAppt(id) {
+  const list = getAppointments();
+  const idx = list.findIndex(a => a.id === id);
+  if (idx === -1) return;
+  list[idx].status = 'approved';
+  saveAppointments(list);
+  renderAppointments();
+  renderStats();
+}
+function declineAppt(id) {
+  if (!confirm('Decline this appointment request?')) return;
+  const list = getAppointments();
+  const idx = list.findIndex(a => a.id === id);
+  if (idx === -1) return;
+  list[idx].status = 'declined';
+  saveAppointments(list);
+  renderAppointments();
+  renderStats();
+}
+
+// ── SEND MEET LINK MODAL ──
+let _currentApptId = null;
+function openSendLink(id) {
+  const list = getAppointments();
+  const appt = list.find(a => a.id === id);
+  if (!appt) return;
+  _currentApptId = id;
+  document.getElementById('modalEmail').value = appt.email;
+  document.getElementById('modalDateTime').value = formatDate(appt.date) + ' · ' + appt.timeRange + ' TST';
+  document.getElementById('modalMeetLink').value = '';
+  document.getElementById('modalNote').value = '';
+  document.getElementById('sendLinkModal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('sendLinkModal').classList.remove('open');
+  _currentApptId = null;
+}
+
+function sendMeetLink() {
+  const meetLink = document.getElementById('modalMeetLink').value.trim();
+  const note = document.getElementById('modalNote').value.trim();
+  if (!meetLink) { alert('Please enter a Google Meet link.'); return; }
+  if (!meetLink.startsWith('https://meet.google.com/')) {
+    alert('Please enter a valid Google Meet link (https://meet.google.com/...)');
+    return;
+  }
+
+  const list = getAppointments();
+  const appt = list.find(a => a.id === _currentApptId);
+  if (!appt) return;
+
+  const sendBtn = document.querySelector('#sendLinkModal .modal-btn.send');
+  sendBtn.textContent = 'Sending...';
+  sendBtn.disabled = true;
+
+  const templateParams = {
+    to_email: appt.email,
+    requester_name: appt.name,
+    appt_date: formatDate(appt.date),
+    appt_time: appt.timeRange + ' TST',
+    appt_purpose: appt.purpose,
+    meet_link: meetLink,
+    personal_note: note || 'Looking forward to speaking with you!',
+    host_name: 'Md Hasibuzzaman',
+    appt_id: appt.id
+  };
+
+  emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_CON, templateParams)
+    .then(() => {
+      appt.status = 'approved';
+      appt.meetLink = meetLink;
+      saveAppointments(list);
+      renderAppointments();
+      renderStats();
+      closeModal();
+      alert('Meet link sent successfully to ' + appt.email);
+    })
+    .catch(err => {
+      console.error(err);
+      alert('Failed to send email. Check your EmailJS configuration.');
+    })
+    .finally(() => {
+      sendBtn.textContent = 'Send Meet Link';
+      sendBtn.disabled = false;
+    });
+}
+
+// ── SCHEDULE EDITOR ──
+function renderScheduleEditor() {
+  const sched = getSchedule();
+  const dayOrder = [1,2,3,4,5,6,0];
+  const editor = document.getElementById('scheduleEditor');
+  editor.innerHTML = dayOrder.map(d => {
+    const day = sched[d] || { name: dayName(d), slots: [] };
+    const isOn = day.slots && day.slots.length > 0;
+    return `<div class="day-editor" id="dayeditor-${d}">
+      <div class="day-editor-header">
+        <span class="day-label">${day.name || dayName(d)}</span>
+        <label class="day-toggle">
+          <span style="margin-right:.5rem">${isOn ? 'Available' : 'Off'}</span>
+          <div class="toggle-sw ${isOn ? 'on' : ''}" id="toggle-${d}" onclick="toggleDay(${d})"></div>
+        </label>
+      </div>
+      <div class="slots-list" id="slots-${d}">
+        ${(day.slots||[]).map((s,i) => slotRowHtml(d, i, s.start, s.end)).join('')}
+      </div>
+      <button class="add-slot-btn" onclick="addSlot(${d})" ${isOn ? '' : 'style="display:none"'} id="addSlotBtn-${d}">+ Add Time Slot</button>
+    </div>`;
+  }).join('');
+}
+
+function dayName(d) {
+  return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d];
+}
+
+function slotRowHtml(d, i, start, end) {
+  return `<div class="slot-row" id="slotrow-${d}-${i}">
+    <input type="time" value="${start}" id="slotStart-${d}-${i}">
+    <span class="slot-sep">to</span>
+    <input type="time" value="${end}" id="slotEnd-${d}-${i}">
+    <button class="slot-remove" onclick="removeSlot(${d},${i})">Remove</button>
+  </div>`;
+}
+
+function toggleDay(d) {
+  const toggle = document.getElementById('toggle-'+d);
+  const slotsEl = document.getElementById('slots-'+d);
+  const addBtn = document.getElementById('addSlotBtn-'+d);
+  const isOn = toggle.classList.toggle('on');
+  toggle.previousElementSibling.textContent = isOn ? 'Available' : 'Off';
+  if (isOn) {
+    addBtn.style.display = '';
+    if (!slotsEl.children.length) addSlot(d);
+  } else {
+    slotsEl.innerHTML = '';
+    addBtn.style.display = 'none';
+  }
+}
+
+let _slotCounters = {};
+function addSlot(d) {
+  const slotsEl = document.getElementById('slots-'+d);
+  const i = (_slotCounters[d] = (_slotCounters[d]||0) + slotsEl.children.length + 1);
+  const div = document.createElement('div');
+  div.innerHTML = slotRowHtml(d, i, '09:00', '18:00');
+  slotsEl.appendChild(div.firstElementChild);
+}
+
+function removeSlot(d, i) {
+  const el = document.getElementById('slotrow-'+d+'-'+i);
+  if (el) el.remove();
+}
+
+function saveSchedule() {
+  const sched = {};
+  const dayOrder = [1,2,3,4,5,6,0];
+  dayOrder.forEach(d => {
+    const toggle = document.getElementById('toggle-'+d);
+    const isOn = toggle && toggle.classList.contains('on');
+    const slots = [];
+    if (isOn) {
+      const slotsEl = document.getElementById('slots-'+d);
+      Array.from(slotsEl.children).forEach(row => {
+        const startEl = row.querySelector('input[id^=slotStart]');
+        const endEl   = row.querySelector('input[id^=slotEnd]');
+        if (startEl && endEl && startEl.value && endEl.value) {
+          slots.push({ start: startEl.value, end: endEl.value });
+        }
+      });
+    }
+    sched[d] = { name: dayName(d), slots };
+  });
+  localStorage.setItem('appt_schedule', JSON.stringify(sched));
+  const notice = document.getElementById('saveNotice');
+  notice.style.display = 'block';
+  setTimeout(() => notice.style.display = 'none', 3000);
+}
+
+function resetSchedule() {
+  if (!confirm('Reset schedule to defaults?')) return;
+  localStorage.removeItem('appt_schedule');
+  renderScheduleEditor();
+}
+</script>
+</body>
+</html>
