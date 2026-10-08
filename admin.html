@@ -1,0 +1,1985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel — Appointment Manager</title>
+<style>
+:root {
+  --teal:#097C87; --teal-dark:#065E68; --cyan:#23CED9; --cyan-light:#E6F9FA;
+  --peach:#FCA47C; --yellow:#F9D77B; --border:#cde8ea; --bg:#F2FAFA;
+  --white:#fff; --text:#1a1a1a; --muted:#4a5a5c;
+  --shadow:0 4px 16px rgba(9,124,135,.14);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text);min-height:100vh;}
+a{color:inherit;text-decoration:none;}
+
+/* ── AUTH OVERLAY ── */
+#authOverlay{position:fixed;inset:0;background:linear-gradient(135deg,#065E68,#097C87);display:flex;align-items:center;justify-content:center;z-index:9999;}
+.auth-box{background:#fff;border-radius:20px;padding:3rem 2.5rem;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center;}
+.auth-box h1{font-size:1.5rem;font-weight:900;color:var(--teal-dark);margin-bottom:.3rem;}
+.auth-box p{font-size:.88rem;color:var(--muted);margin-bottom:1.5rem;}
+.auth-input{width:100%;padding:.85rem 1.2rem;border:2px solid var(--border);border-radius:10px;font-size:.95rem;outline:none;transition:border-color .2s;display:block;}
+.auth-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(35,206,217,.15);}
+.auth-btn{width:100%;margin-top:.75rem;padding:1rem;background:linear-gradient(135deg,var(--teal),var(--cyan));color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:800;cursor:pointer;transition:all .3s;letter-spacing:.02em;}
+.auth-btn:hover{opacity:.9;transform:translateY(-1px);}
+.auth-err{color:#ef4444;font-size:.84rem;margin-top:.75rem;display:none;padding:.5rem .75rem;background:rgba(239,68,68,.08);border-radius:8px;border:1px solid rgba(239,68,68,.2);}
+
+/* ── LAYOUT ── */
+.topbar{background:linear-gradient(90deg,#065E68,#097C87);color:#fff;padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow);}
+.topbar-brand{font-size:1.2rem;font-weight:900;display:flex;align-items:center;gap:.6rem;}
+.topbar-brand span{background:var(--peach);color:#fff;padding:.2rem .7rem;border-radius:50px;font-size:.75rem;font-weight:800;}
+.topbar-actions{display:flex;gap:.8rem;align-items:center;}
+.tbar-btn{padding:.55rem 1.2rem;border-radius:50px;border:none;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s;}
+.tbar-btn.outline{background:transparent;border:2px solid rgba(255,255,255,.4);color:#fff;}
+.tbar-btn.outline:hover{border-color:#fff;background:rgba(255,255,255,.1);}
+.tbar-btn.danger{background:#ef4444;color:#fff;}
+.tbar-btn.danger:hover{background:#dc2626;}
+.tbar-btn.primary{background:var(--yellow);color:var(--teal-dark);}
+.tbar-btn.primary:hover{background:#f0c830;}
+
+.main-nav{display:flex;background:#fff;border-bottom:2px solid var(--border);padding:0 2rem;gap:0;}
+.nav-btn{padding:.9rem 1.4rem;border:none;background:transparent;font-size:.9rem;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;}
+.nav-btn.active{color:var(--teal-dark);border-bottom-color:var(--cyan);}
+.nav-btn:hover{color:var(--teal);}
+.site-subnav-btn{padding:.55rem 1.1rem;border-radius:50px;border:2px solid var(--border);background:#fff;color:var(--muted);font-size:.82rem;font-weight:700;cursor:pointer;transition:all .2s;}
+.site-subnav-btn.active{background:var(--teal);border-color:var(--teal);color:#fff;}
+.site-subnav-btn:hover:not(.active){border-color:var(--cyan);}
+.site-save-msg{margin-left:.8rem;font-size:.84rem;font-weight:700;color:var(--teal-dark);}
+.site-list-row{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;padding:.9rem 1.1rem;border:1.5px solid var(--border);border-radius:10px;margin-bottom:.7rem;background:var(--bg);}
+.site-list-row-body strong{display:block;font-size:.9rem;color:var(--text);margin-bottom:.2rem;}
+.site-list-row-body span{display:block;font-size:.8rem;color:var(--muted);}
+.site-list-row-actions{display:flex;gap:.4rem;flex-shrink:0;flex-wrap:wrap;}
+
+.content{padding:2rem;max-width:1200px;margin:0 auto;}
+
+/* ── CARDS ── */
+.card{background:#fff;border:2px solid var(--border);border-radius:16px;padding:1.8rem;margin-bottom:1.5rem;box-shadow:var(--shadow);}
+.card h2{font-size:1.1rem;font-weight:800;color:var(--teal-dark);margin-bottom:1.5rem;padding-bottom:.8rem;border-bottom:2px solid var(--cyan-light);display:flex;align-items:center;gap:.6rem;}
+
+/* ── APPOINTMENTS TABLE ── */
+.appt-table{width:100%;border-collapse:collapse;font-size:.9rem;}
+.appt-table th{background:var(--bg);color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;padding:.75rem 1rem;text-align:left;border-bottom:2px solid var(--border);}
+.appt-table td{padding:.9rem 1rem;border-bottom:1px solid var(--border);vertical-align:middle;}
+.appt-table tr:last-child td{border-bottom:none;}
+.appt-table tr:hover td{background:var(--cyan-light);}
+.badge{display:inline-block;padding:.25rem .75rem;border-radius:50px;font-size:.75rem;font-weight:800;text-transform:uppercase;}
+.badge-pending{background:rgba(249,215,123,.25);color:#b45309;border:1.5px solid #F9D77B;}
+.badge-approved{background:rgba(34,197,94,.15);color:#166534;border:1.5px solid #86efac;}
+.badge-declined{background:rgba(239,68,68,.12);color:#991b1b;border:1.5px solid #fca5a5;}
+.action-btns{display:flex;gap:.5rem;flex-wrap:wrap;}
+.action-btn{padding:.4rem .9rem;border-radius:8px;border:none;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .2s;}
+.action-btn.approve{background:rgba(34,197,94,.15);color:#166534;border:1.5px solid #86efac;}
+.action-btn.approve:hover{background:#22c55e;color:#fff;}
+.action-btn.decline{background:rgba(239,68,68,.12);color:#991b1b;border:1.5px solid #fca5a5;}
+.action-btn.decline:hover{background:#ef4444;color:#fff;}
+.action-btn.send-link{background:linear-gradient(135deg,var(--teal),var(--cyan));color:#fff;}
+.action-btn.send-link:hover{opacity:.85;}
+.empty-state{text-align:center;padding:3rem;color:var(--muted);font-size:.95rem;}
+.empty-state svg{margin-bottom:1rem;opacity:.3;}
+
+/* ── SCHEDULE EDITOR ── */
+.schedule-editor{display:flex;flex-direction:column;gap:1.2rem;}
+.day-editor{background:var(--bg);border:2px solid var(--border);border-radius:12px;padding:1.2rem;}
+.day-editor-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+.day-label{font-weight:800;font-size:.95rem;color:var(--teal-dark);}
+.day-toggle{display:flex;align-items:center;gap:.5rem;font-size:.85rem;color:var(--muted);}
+.toggle-sw{width:42px;height:24px;background:#ddd;border-radius:50px;position:relative;cursor:pointer;transition:background .2s;}
+.toggle-sw.on{background:var(--cyan);}
+.toggle-sw::after{content:'';position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.2);}
+.toggle-sw.on::after{transform:translateX(18px);}
+.slots-list{display:flex;flex-direction:column;gap:.6rem;}
+.slot-row{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;}
+.slot-row input[type=time]{padding:.5rem .75rem;border:2px solid var(--border);border-radius:8px;font-size:.9rem;outline:none;transition:border-color .2s;}
+.slot-row input[type=time]:focus{border-color:var(--cyan);}
+.slot-sep{font-size:.85rem;color:var(--muted);font-weight:700;}
+.slot-remove{background:rgba(239,68,68,.12);color:#dc2626;border:1.5px solid #fca5a5;border-radius:8px;padding:.4rem .75rem;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .2s;}
+.slot-remove:hover{background:#ef4444;color:#fff;}
+.add-slot-btn{background:rgba(9,124,135,.1);color:var(--teal-dark);border:2px dashed var(--cyan);border-radius:8px;padding:.5rem 1rem;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s;width:100%;}
+.add-slot-btn:hover{background:var(--cyan-light);}
+.save-schedule-btn{background:linear-gradient(135deg,var(--teal),var(--cyan-dark));color:#fff;border:none;border-radius:12px;padding:.9rem 2rem;font-size:.95rem;font-weight:800;cursor:pointer;transition:all .3s;box-shadow:0 4px 14px rgba(9,124,135,.3);}
+.save-schedule-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(9,124,135,.4);}
+.save-notice{display:none;background:rgba(34,197,94,.15);border:1.5px solid #86efac;color:#166534;padding:.75rem 1.2rem;border-radius:10px;font-size:.88rem;font-weight:700;margin-top:1rem;}
+
+/* ── SEND LINK MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);z-index:999;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:#fff;border-radius:20px;padding:2rem;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.modal-box h3{font-size:1.1rem;font-weight:800;color:var(--teal-dark);margin-bottom:1.2rem;}
+.modal-form-group{margin-bottom:1rem;}
+.modal-form-group label{display:block;font-size:.82rem;font-weight:700;color:var(--muted);margin-bottom:.35rem;text-transform:uppercase;}
+.modal-form-group input,.modal-form-group textarea{width:100%;padding:.75rem 1rem;border:2px solid var(--border);border-radius:10px;font-size:.9rem;outline:none;font-family:inherit;transition:border-color .2s;}
+.modal-form-group input:focus,.modal-form-group textarea:focus{border-color:var(--cyan);}
+.modal-form-group textarea{resize:vertical;min-height:80px;}
+.modal-actions{display:flex;gap:.75rem;justify-content:flex-end;margin-top:1.5rem;}
+.modal-btn{padding:.7rem 1.5rem;border-radius:10px;border:none;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .2s;}
+.modal-btn.cancel{background:var(--bg);color:var(--muted);border:2px solid var(--border);}
+.modal-btn.cancel:hover{border-color:var(--muted);}
+.modal-btn.send{background:linear-gradient(135deg,var(--teal),var(--cyan-dark));color:#fff;box-shadow:0 4px 12px rgba(9,124,135,.3);}
+.modal-btn.send:hover{opacity:.9;}
+
+/* ── STATS GRID ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.5rem;}
+.stat-box{background:linear-gradient(135deg,#065E68,#097C87);color:#fff;border-radius:14px;padding:1.4rem;text-align:center;}
+.stat-box-num{font-size:2.2rem;font-weight:900;color:var(--yellow);}
+.stat-box-label{font-size:.8rem;opacity:.85;margin-top:.3rem;font-weight:600;}
+</style>
+</head>
+<body>
+
+<!-- Auth Overlay -->
+<div id="authOverlay">
+  <div class="auth-box">
+    <div style="width:60px;height:60px;background:linear-gradient(135deg,#065E68,#23CED9);border-radius:16px;margin:0 auto 1.2rem;display:flex;align-items:center;justify-content:center;">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="white"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+    </div>
+    <h1>Admin Login</h1>
+    <p>Sign in to manage appointments, schedule &amp; research</p>
+    <input class="auth-input" type="text" id="authUser" placeholder="Username (or admin email for Research tab)" onkeydown="if(event.key==='Enter')document.getElementById('authPass').focus()" style="margin-bottom:.75rem;">
+    <input class="auth-input" type="password" id="authPass" placeholder="Password" onkeydown="if(event.key==='Enter')checkAuth()">
+    <button class="auth-btn" onclick="checkAuth()">Sign In</button>
+    <div class="auth-err" id="authErr">Incorrect username or password.</div>
+    <div id="authResearchNotice" style="display:none;font-size:.78rem;color:#b45309;margin-top:.75rem;padding:.5rem .75rem;background:rgba(249,215,123,.15);border-radius:8px;border:1px solid #F9D77B;text-align:left;">Signed in, but Research tab needs a matching Firebase account — see RESEARCH-SETUP-GUIDE.md.</div>
+  </div>
+</div>
+
+<!-- Top Bar -->
+<div class="topbar">
+  <div class="topbar-brand">
+    Md Hasibuzzaman — Admin
+    <span>Appointment Manager</span>
+  </div>
+  <div class="topbar-actions">
+    <a href="index.html#contact" class="tbar-btn outline">Back to Site</a>
+    <button class="tbar-btn danger" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<!-- Nav -->
+<div class="main-nav">
+  <button class="nav-btn active" onclick="showAdminTab('appointments',this)">Appointments</button>
+  <button class="nav-btn" onclick="showAdminTab('schedule',this)">Schedule</button>
+  <button class="nav-btn" onclick="showAdminTab('research',this)">Research</button>
+  <button class="nav-btn" onclick="showAdminTab('site',this)">Site Content</button>
+</div>
+
+<div class="content" id="adminContent">
+
+  <!-- Appointments Tab -->
+  <div id="atab-appointments">
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="card">
+      <h2>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:var(--cyan)"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+        Appointment Requests
+      </h2>
+      <div id="apptTableWrap"></div>
+    </div>
+  </div>
+
+  <!-- Schedule Tab -->
+  <div id="atab-schedule" style="display:none;">
+    <div class="card">
+      <h2>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:var(--cyan)"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+        Weekly Availability Schedule
+      </h2>
+      <p style="font-size:.88rem;color:var(--muted);margin-bottom:1.5rem;">
+        Configure your available time slots. Changes are saved to the browser and reflected on your website's appointment booking page.
+      </p>
+      <div class="schedule-editor" id="scheduleEditor"></div>
+      <div style="margin-top:1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <button class="save-schedule-btn" onclick="saveSchedule()">Save Schedule</button>
+        <button class="modal-btn cancel" onclick="resetSchedule()">Reset to Default</button>
+      </div>
+      <div class="save-notice" id="saveNotice">Schedule saved successfully! Changes are live on your website.</div>
+    </div>
+  </div>
+
+  <!-- Research Tab -->
+  <div id="atab-research" style="display:none;">
+
+    <div id="researchNotConnected" style="display:none;" class="card">
+      <h2>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:var(--cyan)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+        Research Tab Not Connected
+      </h2>
+      <p style="font-size:.9rem;color:var(--muted);line-height:1.6;">
+        Sign in above with your <strong>Firebase admin email &amp; password</strong> to manage publications (this is separate
+        from the legacy Appointments username/password). See <code>RESEARCH-SETUP-GUIDE.md</code> for one-time setup steps —
+        you'll create a free Firebase project, enable Firestore + Authentication, and paste your config into
+        <code>RESEARCH_FIREBASE_CONFIG</code> in both <code>admin.html</code> and <code>index.html</code>.
+      </p>
+    </div>
+
+    <div id="researchConnected" style="display:none;">
+      <div class="stats-grid" id="researchStatsGrid"></div>
+
+      <div class="card">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:var(--cyan)"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          Publications
+        </h2>
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1.3rem;">
+          <button class="tbar-btn primary" style="color:#065E68;" onclick="toggleSearchBox()">🔍 Search Online &amp; Import</button>
+          <button class="tbar-btn outline" style="border-color:var(--cyan);color:var(--teal-dark);" onclick="openPubModal()">+ Add Publication</button>
+          <button class="tbar-btn outline" style="border-color:var(--cyan);color:var(--teal-dark);" onclick="toggleImportBox()">Import from BibTeX</button>
+          <button class="tbar-btn outline" style="border-color:var(--cyan);color:var(--teal-dark);" onclick="syncAllCitations()">⟳ Sync Citations (Semantic Scholar)</button>
+        </div>
+
+        <div id="onlineSearchBox" style="display:none;margin-bottom:1.5rem;padding:1.2rem;background:var(--bg);border:2px dashed var(--cyan);border-radius:12px;">
+          <p style="font-size:.85rem;color:var(--muted);margin-bottom:.7rem;">
+            Live search of academic sources (Semantic Scholar's open graph — covers the same corpus as Google Scholar;
+            direct Scholar scraping isn't used since it violates Google's Terms of Service and gets blocked).
+            Search by your name to discover your latest publications, or by title/keywords. Results update as you type.
+            Imported items land below as <strong>Pending Review</strong> — nothing goes live until you approve it.
+          </p>
+          <div style="display:flex;gap:.5rem;margin-bottom:.7rem;">
+            <button id="searchModeAuthorBtn" style="border:2px solid var(--cyan);background:var(--teal);color:#fff;border-radius:8px;padding:.5rem 1rem;font-size:.85rem;font-weight:700;cursor:pointer;" onclick="setSearchMode('author')">By Author</button>
+            <button id="searchModeKeywordBtn" style="border:2px solid var(--border);background:#fff;color:var(--muted);border-radius:8px;padding:.5rem 1rem;font-size:.85rem;font-weight:700;cursor:pointer;" onclick="setSearchMode('keyword')">By Title / Keywords</button>
+          </div>
+          <input type="text" id="onlineSearchInput" placeholder="Search by author name…" oninput="onSearchInput()"
+                 style="width:100%;padding:.75rem 1rem;border:2px solid var(--border);border-radius:10px;font-size:.9rem;outline:none;">
+          <div id="onlineSearchResults" style="margin-top:1rem;"></div>
+          <div style="margin-top:.75rem;">
+            <button class="modal-btn cancel" onclick="toggleSearchBox()">Close</button>
+          </div>
+        </div>
+
+        <div id="bibtexImportBox" style="display:none;margin-bottom:1.5rem;padding:1.2rem;background:var(--bg);border:2px dashed var(--cyan);border-radius:12px;">
+          <p style="font-size:.85rem;color:var(--muted);margin-bottom:.6rem;">
+            Paste BibTeX entries here (e.g. exported from your Google Scholar profile via each citation's "Export → BibTeX" link).
+            Each entry will be added as a draft you can review and publish.
+          </p>
+          <textarea id="bibtexInput" rows="8" style="width:100%;padding:.75rem;border:2px solid var(--border);border-radius:8px;font-family:monospace;font-size:.82rem;"></textarea>
+          <div style="margin-top:.75rem;display:flex;gap:.6rem;">
+            <button class="action-btn send-link" onclick="importBibtex()">Parse &amp; Add</button>
+            <button class="modal-btn cancel" onclick="toggleImportBox()">Cancel</button>
+          </div>
+          <div id="bibtexResult" style="margin-top:.75rem;font-size:.85rem;"></div>
+        </div>
+
+        <div id="pubTableWrap"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Site Content Tab -->
+  <div id="atab-site" style="display:none;">
+
+    <div id="siteNotConnected" style="display:none;" class="card">
+      <h2>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:var(--cyan)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+        Site Content Not Connected
+      </h2>
+      <p style="font-size:.9rem;color:var(--muted);line-height:1.6;">Sign in above with your Firebase admin email &amp; password to edit site content.</p>
+    </div>
+
+    <div id="siteConnected" style="display:none;">
+      <div class="card">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="color:var(--cyan)"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          Site Content
+        </h2>
+        <p style="font-size:.85rem;color:var(--muted);margin-bottom:1.3rem;">
+          Edit any section below — changes publish to your live website automatically, the same way Research does.
+          The <strong>Experiments</strong> pages are intentionally left out — they stay as hand-built interactive demos.
+        </p>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.5rem;">
+          <button class="site-subnav-btn active" onclick="showSiteSection('hero',this)">Hero</button>
+          <button class="site-subnav-btn" onclick="showSiteSection('about',this)">About / Bio</button>
+          <button class="site-subnav-btn" onclick="showSiteSection('contact',this)">Contact Info</button>
+          <button class="site-subnav-btn" onclick="showSiteSection('education',this)">Education</button>
+          <button class="site-subnav-btn" onclick="showSiteSection('experience',this)">Experience</button>
+          <button class="site-subnav-btn" onclick="showSiteSection('awards',this)">Awards</button>
+          <button class="site-subnav-btn" onclick="showSiteSection('skills',this)">Skills</button>
+          <button class="site-subnav-btn" onclick="showSiteSection('certificates',this)">Certificates</button>
+        </div>
+
+        <!-- Hero -->
+        <div class="site-section-panel" id="siteSection-hero">
+          <div class="modal-form-group"><label>Name</label><input type="text" id="heroName"></div>
+          <div class="modal-form-group"><label>Tagline</label><input type="text" id="heroTagline"></div>
+          <div class="modal-form-group"><label>Mission Statement</label><textarea id="heroMission" style="min-height:70px;"></textarea></div>
+          <div class="modal-form-group"><label>Institution Line</label><input type="text" id="heroInstitution"></div>
+          <div class="modal-form-group"><label>Google Scholar URL</label><input type="url" id="heroScholarUrl"></div>
+          <div class="modal-form-group"><label>LinkedIn URL</label><input type="url" id="heroLinkedinUrl"></div>
+          <button class="action-btn send-link" onclick="saveHero()">Save Hero</button>
+          <span class="site-save-msg" id="siteSaveMsg-hero"></span>
+        </div>
+
+        <!-- About -->
+        <div class="site-section-panel" id="siteSection-about" style="display:none;">
+          <div class="modal-form-group">
+            <label>Biography (separate paragraphs with a blank line — shown on Home &amp; About page)</label>
+            <textarea id="aboutParagraphs" style="min-height:220px;"></textarea>
+          </div>
+          <button class="action-btn send-link" onclick="saveAbout()">Save Biography</button>
+          <span class="site-save-msg" id="siteSaveMsg-about"></span>
+        </div>
+
+        <!-- Contact -->
+        <div class="site-section-panel" id="siteSection-contact" style="display:none;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+            <div class="modal-form-group"><label>Personal Email</label><input type="email" id="contactEmail"></div>
+            <div class="modal-form-group"><label>NTPU Email</label><input type="email" id="contactNtpuEmail"></div>
+            <div class="modal-form-group"><label>Phone</label><input type="text" id="contactPhone"></div>
+            <div class="modal-form-group"><label>LinkedIn URL</label><input type="url" id="contactLinkedinUrl"></div>
+            <div class="modal-form-group"><label>GitHub URL</label><input type="url" id="contactGithubUrl"></div>
+            <div class="modal-form-group"><label>Google Scholar URL</label><input type="url" id="contactScholarUrl"></div>
+            <div class="modal-form-group"><label>ResearchGate URL</label><input type="url" id="contactResearchgateUrl"></div>
+            <div class="modal-form-group"><label>ORCID URL</label><input type="url" id="contactOrcidUrl"></div>
+            <div class="modal-form-group"><label>Web of Science URL</label><input type="url" id="contactWosUrl"></div>
+          </div>
+          <button class="action-btn send-link" onclick="saveContact()">Save Contact Info</button>
+          <span class="site-save-msg" id="siteSaveMsg-contact"></span>
+        </div>
+
+        <!-- Education -->
+        <div class="site-section-panel" id="siteSection-education" style="display:none;">
+          <h3 style="font-size:.95rem;color:var(--teal-dark);margin-bottom:.8rem;">Degrees</h3>
+          <div id="listWrap-education-items"></div>
+          <button class="action-btn send-link" onclick="openListItemModal('education','items')">+ Add Degree</button>
+          <h3 style="font-size:.95rem;color:var(--teal-dark);margin:1.6rem 0 .8rem;">International Exchange Programs &amp; Courses</h3>
+          <div id="listWrap-education-exchangePrograms"></div>
+          <button class="action-btn send-link" onclick="openListItemModal('education','exchangePrograms')">+ Add Program</button>
+        </div>
+
+        <!-- Experience -->
+        <div class="site-section-panel" id="siteSection-experience" style="display:none;">
+          <div id="listWrap-experience-items"></div>
+          <button class="action-btn send-link" onclick="openListItemModal('experience','items')">+ Add Experience Entry</button>
+        </div>
+
+        <!-- Awards -->
+        <div class="site-section-panel" id="siteSection-awards" style="display:none;">
+          <div id="listWrap-awards-items"></div>
+          <button class="action-btn send-link" onclick="openListItemModal('awards','items')">+ Add Award</button>
+        </div>
+
+        <!-- Skills -->
+        <div class="site-section-panel" id="siteSection-skills" style="display:none;">
+          <div id="listWrap-skills-items"></div>
+          <button class="action-btn send-link" onclick="openListItemModal('skills','items')">+ Add Skill Group</button>
+        </div>
+
+        <!-- Certificates -->
+        <div class="site-section-panel" id="siteSection-certificates" style="display:none;">
+          <div id="listWrap-certificates-items"></div>
+          <button class="action-btn send-link" onclick="openCertModal()">+ Add Certificate</button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Generic List Item Modal (Education/Exchange/Experience/Awards/Skills) -->
+<div class="modal-overlay" id="listItemModal">
+  <div class="modal-box" style="max-width:560px;">
+    <h3 id="listItemModalTitle">Edit Item</h3>
+    <div id="listItemModalFields"></div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeListItemModal()">Cancel</button>
+      <button class="modal-btn send" onclick="saveListItem()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Certificate Add/Edit Modal -->
+<div class="modal-overlay" id="certModal">
+  <div class="modal-box" style="max-width:560px;max-height:88vh;overflow-y:auto;">
+    <h3 id="certModalTitle">Add Certificate</h3>
+    <div class="modal-form-group"><label>Title *</label><input type="text" id="certTitle"></div>
+    <div class="modal-form-group"><label>Issuer *</label><input type="text" id="certIssuer"></div>
+    <div class="modal-form-group"><label>Date / Certificate No.</label><input type="text" id="certDate"></div>
+    <div class="modal-form-group"><label>Description</label><textarea id="certDescription" style="min-height:90px;"></textarea></div>
+    <div class="modal-form-group"><label>Tags (comma-separated)</label><input type="text" id="certTags"></div>
+    <div class="modal-form-group"><label>Badge Text (e.g. "★ 1st in Class")</label><input type="text" id="certBadge"></div>
+    <div class="modal-form-group">
+      <label>Certificate Image</label>
+      <input type="file" id="certImageFile" accept="image/*">
+      <div id="certImagePreviewWrap" style="margin-top:.6rem;display:none;">
+        <img id="certImagePreview" style="max-width:160px;border-radius:8px;border:2px solid var(--border);">
+      </div>
+      <div id="certUploadProgress" style="font-size:.8rem;color:var(--muted);margin-top:.4rem;"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeCertModal()">Cancel</button>
+      <button class="modal-btn send" onclick="saveCertificate()" id="certSaveBtn">Save Certificate</button>
+    </div>
+  </div>
+</div>
+
+<!-- Publication Add/Edit Modal -->
+<div class="modal-overlay" id="pubModal">
+  <div class="modal-box" style="max-width:640px;max-height:88vh;overflow-y:auto;">
+    <h3 id="pubModalTitle">Add Publication</h3>
+    <input type="hidden" id="pubId">
+    <div class="modal-form-group">
+      <label>Title *</label>
+      <input type="text" id="pubTitle" placeholder="Dynamic Path Planning in the Unknown Environment...">
+    </div>
+    <div class="modal-form-group">
+      <label>Authors *</label>
+      <input type="text" id="pubAuthors" placeholder="Md Hasibuzzaman, Gene Eu Jan, Han-Yan Wu">
+    </div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:1rem;">
+      <div class="modal-form-group">
+        <label>Journal / Conference *</label>
+        <input type="text" id="pubVenue" placeholder="International Journal of Environmental Sciences">
+      </div>
+      <div class="modal-form-group">
+        <label>Type</label>
+        <select id="pubType" style="width:100%;padding:.75rem 1rem;border:2px solid var(--border);border-radius:10px;font-size:.9rem;">
+          <option value="journal">Journal</option>
+          <option value="conference">Conference</option>
+          <option value="preprint">Preprint</option>
+          <option value="thesis">Thesis</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+      <div class="modal-form-group">
+        <label>Year</label>
+        <input type="number" id="pubYear" placeholder="2025">
+      </div>
+      <div class="modal-form-group">
+        <label>Pages</label>
+        <input type="text" id="pubPages" placeholder="1510–1532">
+      </div>
+    </div>
+    <div class="modal-form-group">
+      <label>DOI</label>
+      <input type="text" id="pubDoi" placeholder="10.64252/5xd0p524">
+    </div>
+    <div class="modal-form-group">
+      <label>Publication URL (if no DOI)</label>
+      <input type="url" id="pubUrl" placeholder="https://...">
+    </div>
+    <div class="modal-form-group">
+      <label>PDF / Full-Text Link</label>
+      <input type="url" id="pubPdfUrl" placeholder="https://...">
+    </div>
+    <div class="modal-form-group">
+      <label>Abstract</label>
+      <textarea id="pubAbstract" style="min-height:110px;"></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+      <div class="modal-form-group">
+        <label>Keywords (comma-separated)</label>
+        <input type="text" id="pubKeywords" placeholder="path planning, skeletonization">
+      </div>
+      <div class="modal-form-group">
+        <label>Categories (comma-separated)</label>
+        <input type="text" id="pubCategories" placeholder="Robotics, Computer Vision">
+      </div>
+    </div>
+    <div class="modal-form-group">
+      <label>Citation Count</label>
+      <input type="number" id="pubCitationCount" placeholder="0">
+    </div>
+    <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+      <label style="display:flex;align-items:center;gap:.5rem;font-size:.88rem;font-weight:700;color:var(--muted);">
+        <input type="checkbox" id="pubFeatured" style="width:17px;height:17px;"> Featured
+      </label>
+      <label style="display:flex;align-items:center;gap:.5rem;font-size:.88rem;font-weight:700;color:var(--muted);">
+        <input type="checkbox" id="pubHidden" style="width:17px;height:17px;"> Hidden from website
+      </label>
+      <label style="display:flex;align-items:center;gap:.5rem;font-size:.88rem;font-weight:700;color:var(--muted);">
+        <input type="checkbox" id="pubStatusDraft" style="width:17px;height:17px;"> Draft (not peer-reviewed yet)
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closePubModal()">Cancel</button>
+      <button class="modal-btn send" onclick="savePublication()">Save Publication</button>
+    </div>
+  </div>
+</div>
+
+<!-- Send Meet Link Modal -->
+<div class="modal-overlay" id="sendLinkModal">
+  <div class="modal-box">
+    <h3>Send Google Meet Link</h3>
+    <div class="modal-form-group">
+      <label>Requester Email</label>
+      <input type="email" id="modalEmail" readonly>
+    </div>
+    <div class="modal-form-group">
+      <label>Google Meet Link *</label>
+      <input type="url" id="modalMeetLink" placeholder="https://meet.google.com/xxx-xxxx-xxx">
+    </div>
+    <div class="modal-form-group">
+      <label>Appointment Date &amp; Time</label>
+      <input type="text" id="modalDateTime" readonly>
+    </div>
+    <div class="modal-form-group">
+      <label>Personal Note (optional)</label>
+      <textarea id="modalNote" placeholder="Add a personal message to the requester..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn send" onclick="sendMeetLink()">Send Meet Link</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-storage-compat.js"></script>
+<script>
+// ── CONFIG — keep in sync with index.html ──
+const ADMIN_USERNAME       = 'Cobalt1161';
+const ADMIN_PASSWORD       = 'pBAVu3Tk3t^44!iN';
+const EMAILJS_PUBLIC_KEY   = 'YOUR_EMAILJS_PUBLIC_KEY';
+const EMAILJS_SERVICE_ID   = 'YOUR_SERVICE_ID';
+const EMAILJS_TEMPLATE_CON = 'YOUR_CONFIRM_TEMPLATE_ID';
+const APPS_SCRIPT_URL      = 'https://script.google.com/macros/s/AKfycbwFCJBq5mKfrQ9iFDjfefVtO2_-RrD_Y362If2facIufoGjfGvl1OJkRy0FXRM9cxSa/exec';
+
+// Research/Publications backend — keep in sync with index.html
+const RESEARCH_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBC25FsgVKMuCCVPVwq6T47exmC6lFVZHs",
+  authDomain: "paper-f082d.firebaseapp.com",
+  projectId: "paper-f082d",
+  storageBucket: "paper-f082d.firebasestorage.app",
+  messagingSenderId: "985216456160",
+  appId: "1:985216456160:web:30804755698c709e48c785"
+};
+const RESEARCH_CONFIGURED = RESEARCH_FIREBASE_CONFIG.apiKey !== 'YOUR_FIREBASE_API_KEY';
+let researchAuthed = false;
+let researchApp = null, researchDb = null, researchStorage = null;
+let pubCache = [];
+let pubUnsub = null;
+
+// Site content — keep this object in sync with the identical copy in index.html.
+// It's the one-time migration/fallback content; once a section is saved via this
+// panel, the live Firestore copy takes over for the public site.
+const DEFAULT_SITE_CONTENT = {
+  hero: {
+    name: 'Md Hasibuzzaman',
+    tagline: 'Ph.D. Researcher · Robotics · AI · Computer Vision',
+    mission: 'Building intelligent navigation systems for autonomous robots in complex, unknown environments.',
+    institution: 'National Taipei University, Taiwan',
+    scholarUrl: 'https://scholar.google.com/citations?user=KRdmGLIAAAAJ&hl=en',
+    linkedinUrl: 'https://www.linkedin.com/in/md-hasibuzzaman-57818b1aa'
+  },
+  about: {
+    paragraphs: [
+      'I am a Ph.D. researcher at National Taipei University, Taiwan, pursuing a doctorate in Electrical Engineering and Computer Science. My research is focused on robot path planning, obstacle avoidance, intelligent systems, pattern recognition, and computer vision for autonomous mobile robots.',
+      'My core research investigates skeletonization via wave propagation for mobile robot navigation in unknown environments, developing novel collision-avoidance algorithms that integrate Euclidean distance transforms with topological medial-axis extraction using the four-stage EGF method.',
+      'I received my M.E. in Computer Science and Information Engineering from Asia University, Taiwan, in 2026, with a full MOE Scholarship (final score 93.42/100). Prior to that, I completed a B.Tech. in Electrical & Electronics Engineering at Lovely Professional University, India, in 2024 (GPA 8.18/10, 2020–2024).'
+    ]
+  },
+  contact: {
+    email: 'hsbuzzaman@gmail.com',
+    ntpuEmail: 's811576301@webmail.ntpu.edu.tw',
+    phone: '+8860987328517',
+    linkedinUrl: 'https://www.linkedin.com/in/md-hasibuzzaman-57818b1aa',
+    githubUrl: 'https://github.com/hasib1233333',
+    scholarUrl: 'https://scholar.google.com/citations?user=KRdmGLIAAAAJ&hl=en',
+    researchgateUrl: 'https://www.researchgate.net/profile/Md-Hasibuzzaman-8',
+    orcidUrl: 'https://orcid.org/0009-0002-3326-0741',
+    wosUrl: 'https://www.webofscience.com/wos/author/record/PUE-0080-2026'
+  },
+  education: {
+    items: [
+      { degree:'Ph.D. in Electrical Engineering & Computer Science', institution:'National Taipei University, Taiwan', period:'09/2026 — Present', note:'' },
+      { degree:'M.E. in Computer Science & Information Engineering', institution:'Asia University, Wufeng, Taiwan', period:'09/2024 — 08/2026', note:'Score 93.42/100 · MOE Scholarship 2024 · Big Data Lab' },
+      { degree:'B.Tech. in Electrical & Electronics Engineering', institution:'Lovely Professional University, Punjab, India', period:'08/2020 — 06/2024', note:'GPA 8.18/10' }
+    ],
+    exchangePrograms: [
+      { title:'Virtual Exchange — Asia University (Digital Image Processing, Text Mining, Research Methods)', period:'09/2021 – 01/2022' },
+      { title:'Virtual Exchange — Asia University (Behavioral Finance, Culture Tourism, Chinese)', period:'02/2022 – 06/2022' },
+      { title:'Summer Program — Asia University (AI, Web Design, Innovation)', period:'06/2022 – 08/2022' },
+      { title:'5G Technology — Germany (DADB Elective Course)', period:'09/2022 – 11/2022' },
+      { title:'Virtual Exchange — Asia University (Bioinformatics, Real Option)', period:'09/2022 – 01/2023' }
+    ]
+  },
+  experience: {
+    items: [
+      { role:'Ph.D. Researcher', org:'National Taipei University — Dept. of Electrical Engineering & Computer Science, Taiwan', period:'09/2026 — Present', bullets:['Pursuing doctoral research on robot path planning, obstacle avoidance, intelligent systems, pattern recognition, and computer vision.','Extending prior EGF skeletonization and dynamic path planning work toward advanced autonomous navigation frameworks.'] },
+      { role:'Research Assistant', org:'Asia University — Big Data Lab · Wufeng, Taiwan', period:'09/2024 — 08/2026', bullets:['Conducting research on dynamic path planning and EGF skeletonization via wave propagation for autonomous mobile robots in unknown environments.','Developing a collision avoidance algorithm as core thesis work, combining EGF skeleton extraction with real-time navigation.','Applying image processing techniques to robotics and automation path planning problems.'] },
+      { role:'Research Intern — TEEP Program', org:'Asia University · Wufeng, Taiwan', period:'01/2023 — 04/2023', bullets:['Mapped Network Topology Configuration to Graph format using NLP algorithms.','Designed a solution to describe network topology G(N, E) in text-based format as input to a graph-based model.'] },
+      { role:'Electrical Engineering Trainee', org:'West Zone Power Distribution Company Ltd. · Chuadanga, Bangladesh', period:'04/2022 — 06/2022', bullets:['Completed full training on Electric Power Distribution Systems, from generation to transmission.','Participated in repair of a GM 200 KVH transformer coil as part of a team project.'] }
+    ]
+  },
+  awards: {
+    items: [
+      { title:'Taiwan Ministry of Education (MOE) Scholarship', org:'Ministry of Education, Republic of China (Taiwan)', period:'2024', description:'Awarded to international students demonstrating exceptional academic merit. Covers full tuition and monthly living stipend for graduate study in Taiwan.' },
+      { title:'M.E. Graduation Score — 93.42 / 100', org:'Asia University, Taiwan', period:'2024 – 2026', description:'Top academic standing maintained across all graduate coursework in the M.E. program.' }
+    ]
+  },
+  skills: {
+    items: [
+      { category:'Software Tools', skills:['Proteus 8 Professional','NI Multisim','SQL','Windsurf (AI Code Editor)'] },
+      { category:'Programming Languages', skills:['Python','R Language','C / C++'] },
+      { category:'Research Domains', skills:['Dynamic Path Planning','Image Processing','Robotics & Automation','NLP & Graph Theory','Bioinformatics'] }
+    ]
+  },
+  certificates: {
+    items: [
+      { title:'Academic Excellence Award — 1st Place (2nd Semester)', issuer:'Asia University (亞洲大學), Taiwan', date:'December 16, 2025 · Certificate No. 0114001223', description:'Awarded to Md Hasibuzzaman of the Department of Information Engineering (資訊工程學系), Master\'s Program (研究所碩士班), Year 1, Class J, for achieving the highest academic average in the entire class during the 113th Academic Year, 2nd Semester (113學年度第2學期). Recognized for outstanding performance and awarded with the highest commendation by Asia University President Tsai Jin-Fa (蔡進發).', tags:['Academic Excellence','1st in Class','Asia University','AY113 Sem. 2'], badge:'★ 1st in Class', imageUrl:'599658428763472010_20260205084723_page-0001.webp' },
+      { title:'Academic Excellence Award — 1st Place (1st Semester)', issuer:'Asia University (亞洲大學), Taiwan', date:'May 16, 2025 · Certificate No. 0114000577', description:'Awarded to Md Hasibuzzaman of the Department of Information Engineering (資訊工程學系), Master\'s Program (研究所碩士班), Year 1, Class J, for achieving the highest academic average in the entire class during the 113th Academic Year, 1st Semester (113學年度第1學期). This honor reflects consistent academic dedication, culminating in a perfect GPA of 4.30/4.30 across both semesters.', tags:['Academic Excellence','1st in Class','Asia University','AY113 Sem. 1'], badge:'★ 1st in Class', imageUrl:'M-D-F-C_page-0001.webp' },
+      { title:'Academic Excellence Award — 1st Place (1st Semester, AY114)', issuer:'Asia University (亞洲大學), Taiwan', date:'May 29, 2026 · ROC Year 115', description:'Awarded to Md Hasibuzzaman of the Department of Information Engineering (資訊工程學系), Master\'s Program (研究所碩士班), Year 2, Class J, for achieving the highest academic average in the entire class during the 114th Academic Year, 1st Semester (114學年度第1學期). Recognized for outstanding performance and exceptional dedication, with highest commendation issued by Asia University President Tsai Jin-Fa (蔡進發).', tags:['Academic Excellence','1st in Class','Asia University','AY114 Sem. 1'], badge:'★ 1st in Class', imageUrl:'award-114-sem1.jpeg' },
+      { title:'Excellence Award — Innovative Academic Achievement', issuer:'Asia University (亞洲大學), Taiwan', date:'May 2026 · Certificate No. 11500010', description:'Awarded to Md Hasibuzzaman of the Master Program of Computer Science & Information Engineering (Class 2C) for innovative academic achievement at Asia University. This certificate recognizes sustained excellence in research and coursework throughout the graduate program, presented by Asia University President Tsai Jin-Fa (蔡進發) in May 2026.', tags:['Excellence Award','Innovative Achievement','Asia University','May 2026'], badge:'🏆 Excellence Award', imageUrl:'award-excellence-2026.jpeg' },
+      { title:'Certificate of TEEP Program — Taiwan Experience Education Program', issuer:'Asia University, Department of Computer Science & Information Engineering', date:'May 1, 2023 · Student ID: 111710105', description:'Certifies that Mr. Md Hasibuzzaman participated in the Taiwan Experience Education Program (TEEP) at the Department of Computer Science & Information Engineering, Asia University, Taiwan. Enrolled from January 2023 to April 2023. Signed by Professor and Dean Ching-Hsien Hsu (Robert), College of Information and Electrical Engineering. This program laid the foundation for subsequent admission into the graduate M.E. program.', tags:['TEEP Program','Asia University','Jan–Apr 2023','Taiwan'], badge:'🎓 TEEP Program', imageUrl:'TEEP.webp' },
+      { title:'Certificate of Completion — 5G Technology', issuer:'German Academy of Digital Education (DADB), Germany', date:'November 14, 2022', description:'Certifies that Md Hasibuzzaman of Lovely Professional University (LPU), India, has successfully completed the course »5G Technology« offered by the German Academy of Digital Education (DADB). The course was instructed by Prof. Dr.-Ing. Axel Sikora and certified by Dr.-Ing. Carsten S. Schröder, CEO at DADB. This certification demonstrates expertise in next-generation wireless communication systems and 5G network architectures.', tags:['5G Technology','DADB Germany','Wireless Communication','Nov 2022'], badge:'📡 5G Technology', imageUrl:'DADB-Md Hasibuzzaman_page-0001.webp' }
+    ]
+  }
+};
+let siteCache = {}; // docId -> live Firestore data (falls back to DEFAULT_SITE_CONTENT per-field when missing)
+let siteUnsubs = {};
+
+emailjs.init(EMAILJS_PUBLIC_KEY);
+
+if (RESEARCH_CONFIGURED && typeof firebase !== 'undefined') {
+  researchApp = firebase.apps.length ? firebase.app() : firebase.initializeApp(RESEARCH_FIREBASE_CONFIG);
+  researchDb = firebase.firestore(researchApp);
+  researchStorage = firebase.storage(researchApp);
+  firebase.auth(researchApp).onAuthStateChanged(user => {
+    researchAuthed = !!user;
+    renderResearchGate();
+    if (researchAuthed) startPubListener(); else stopPubListener();
+    renderSiteGate();
+  });
+}
+
+// ── AUTH ──
+function checkAuth() {
+  const user = document.getElementById('authUser').value.trim();
+  const pw   = document.getElementById('authPass').value;
+  const errEl = document.getElementById('authErr');
+  const legacyOk = (user === ADMIN_USERNAME && pw === ADMIN_PASSWORD);
+
+  function unlock() {
+    document.getElementById('authOverlay').style.display = 'none';
+    sessionStorage.setItem('admin_auth', '1');
+    errEl.style.display = 'none';
+    init();
+  }
+
+  // Try Firebase (Research tab) sign-in whenever an email-shaped username is given.
+  if (RESEARCH_CONFIGURED && researchApp && user.indexOf('@') > -1) {
+    firebase.auth(researchApp).signInWithEmailAndPassword(user, pw)
+      .then(() => { unlock(); })
+      .catch(() => {
+        if (legacyOk) { unlock(); }
+        else { errEl.style.display = 'block'; document.getElementById('authPass').value = ''; }
+      });
+    return;
+  }
+
+  if (legacyOk) { unlock(); return; }
+  errEl.style.display = 'block';
+  document.getElementById('authPass').value = '';
+}
+function logout() {
+  sessionStorage.removeItem('admin_auth');
+  if (RESEARCH_CONFIGURED && researchApp) { firebase.auth(researchApp).signOut().finally(() => location.reload()); }
+  else { location.reload(); }
+}
+if (sessionStorage.getItem('admin_auth') === '1') {
+  document.getElementById('authOverlay').style.display = 'none';
+  init();
+}
+
+// ── ADMIN NAV ──
+function showAdminTab(tab, btn) {
+  document.querySelectorAll('[id^=atab-]').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('atab-' + tab).style.display = 'block';
+  if (btn) btn.classList.add('active');
+  if (tab === 'schedule') renderScheduleEditor();
+  if (tab === 'research') renderResearchGate();
+  if (tab === 'site') renderSiteGate();
+}
+
+// ── DEFAULT SCHEDULE ──
+// Mon–Tue: 9AM–6PM | Wed–Thu: 11AM–12PM | Fri: 10AM–6PM | Sat–Sun: 9AM–12PM & 3PM–4PM
+const DEFAULT_SCHEDULE = {
+  1: { name:'Monday',    slots:[{start:'09:00',end:'18:00'}] },
+  2: { name:'Tuesday',   slots:[{start:'09:00',end:'18:00'}] },
+  3: { name:'Wednesday', slots:[{start:'11:00',end:'12:00'}] },
+  4: { name:'Thursday',  slots:[{start:'11:00',end:'12:00'}] },
+  5: { name:'Friday',    slots:[{start:'10:00',end:'18:00'}] },
+  6: { name:'Saturday',  slots:[{start:'09:00',end:'12:00'},{start:'15:00',end:'16:00'}] },
+  0: { name:'Sunday',    slots:[{start:'09:00',end:'12:00'},{start:'15:00',end:'16:00'}] }
+};
+
+function getSchedule() {
+  const stored = localStorage.getItem('appt_schedule');
+  if (!stored) return JSON.parse(JSON.stringify(DEFAULT_SCHEDULE));
+  // Migrate: if old schedule has empty Sat/Sun, replace with new defaults
+  try {
+    const parsed = JSON.parse(stored);
+    const sat = parsed[6]; const sun = parsed[0];
+    const isOldDefault = (!sat || !sat.slots || sat.slots.length === 0) &&
+                         (!sun || !sun.slots || sun.slots.length === 0);
+    if (isOldDefault) {
+      localStorage.removeItem('appt_schedule');
+      return JSON.parse(JSON.stringify(DEFAULT_SCHEDULE));
+    }
+    return parsed;
+  } catch(e) { return JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)); }
+}
+
+function init() {
+  renderAppointments();
+  renderStats();
+  renderResearchGate();
+  renderSiteGate();
+}
+
+// ── APPOINTMENTS ──
+function getAppointments() {
+  return JSON.parse(localStorage.getItem('appt_pending') || '[]');
+}
+function saveAppointments(list) {
+  localStorage.setItem('appt_pending', JSON.stringify(list));
+}
+
+function renderStats() {
+  const apts = getAppointments();
+  const pending  = apts.filter(a => a.status === 'pending').length;
+  const approved = apts.filter(a => a.status === 'approved').length;
+  const declined = apts.filter(a => a.status === 'declined').length;
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-box"><div class="stat-box-num">${apts.length}</div><div class="stat-box-label">Total Requests</div></div>
+    <div class="stat-box"><div class="stat-box-num" style="color:#F9D77B">${pending}</div><div class="stat-box-label">Pending</div></div>
+    <div class="stat-box"><div class="stat-box-num" style="color:#86efac">${approved}</div><div class="stat-box-label">Approved</div></div>
+    <div class="stat-box"><div class="stat-box-num" style="color:#fca5a5">${declined}</div><div class="stat-box-label">Declined</div></div>
+  `;
+}
+
+function renderAppointments() {
+  const apts = getAppointments().slice().reverse();
+  const wrap = document.getElementById('apptTableWrap');
+  if (apts.length === 0) {
+    wrap.innerHTML = `<div class="empty-state">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+      <p>No appointment requests yet.</p>
+    </div>`;
+    return;
+  }
+  wrap.innerHTML = `<table class="appt-table">
+    <thead><tr>
+      <th>ID</th><th>Name</th><th>Email</th><th>Date</th><th>Time</th><th>Purpose</th><th>Status</th><th>Actions</th>
+    </tr></thead>
+    <tbody>
+    ${apts.map(a => `<tr>
+      <td style="font-size:.78rem;color:var(--muted);font-family:monospace">${a.id}</td>
+      <td><strong>${esc(a.name)}</strong></td>
+      <td><a href="mailto:${esc(a.email)}" style="color:var(--teal)">${esc(a.email)}</a></td>
+      <td>${formatDate(a.date)}</td>
+      <td>${esc(a.timeRange)}</td>
+      <td>${esc(a.purpose)}</td>
+      <td><span class="badge badge-${a.status}">${a.status}</span></td>
+      <td>
+        <div class="action-btns">
+          ${a.status === 'pending' ? `
+            <button class="action-btn approve" onclick="approveAppt('${a.id}')">Approve</button>
+            <button class="action-btn decline" onclick="declineAppt('${a.id}')">Decline</button>
+          ` : ''}
+          ${a.status !== 'declined' ? `
+            <button class="action-btn send-link" onclick="openSendLink('${a.id}')">Send Meet Link</button>
+          ` : ''}
+        </div>
+      </td>
+    </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function formatDate(d) {
+  if (!d) return '';
+  const obj = new Date(d + 'T00:00:00');
+  return obj.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+}
+
+function approveAppt(id) {
+  const list = getAppointments();
+  const idx = list.findIndex(a => a.id === id);
+  if (idx === -1) return;
+  list[idx].status = 'approved';
+  saveAppointments(list);
+  renderAppointments();
+  renderStats();
+}
+function declineAppt(id) {
+  if (!confirm('Decline this appointment request?')) return;
+  const list = getAppointments();
+  const idx = list.findIndex(a => a.id === id);
+  if (idx === -1) return;
+  list[idx].status = 'declined';
+  saveAppointments(list);
+  renderAppointments();
+  renderStats();
+}
+
+// ── SEND MEET LINK MODAL ──
+let _currentApptId = null;
+function openSendLink(id) {
+  const list = getAppointments();
+  const appt = list.find(a => a.id === id);
+  if (!appt) return;
+  _currentApptId = id;
+  document.getElementById('modalEmail').value = appt.email;
+  document.getElementById('modalDateTime').value = formatDate(appt.date) + ' · ' + appt.timeRange + ' TST';
+  document.getElementById('modalMeetLink').value = '';
+  document.getElementById('modalNote').value = '';
+  document.getElementById('sendLinkModal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('sendLinkModal').classList.remove('open');
+  _currentApptId = null;
+}
+
+function sendMeetLink() {
+  const meetLink = document.getElementById('modalMeetLink').value.trim();
+  const note = document.getElementById('modalNote').value.trim();
+  if (!meetLink) { alert('Please enter a Google Meet link.'); return; }
+  if (!meetLink.startsWith('https://meet.google.com/')) {
+    alert('Please enter a valid Google Meet link (https://meet.google.com/...)');
+    return;
+  }
+
+  const list = getAppointments();
+  const appt = list.find(a => a.id === _currentApptId);
+  if (!appt) return;
+
+  const sendBtn = document.querySelector('#sendLinkModal .modal-btn.send');
+  sendBtn.textContent = 'Sending...';
+  sendBtn.disabled = true;
+
+  const templateParams = {
+    to_email: appt.email,
+    requester_name: appt.name,
+    appt_date: formatDate(appt.date),
+    appt_time: appt.timeRange + ' TST',
+    appt_purpose: appt.purpose,
+    meet_link: meetLink,
+    personal_note: note || 'Looking forward to speaking with you!',
+    host_name: 'Md Hasibuzzaman',
+    appt_id: appt.id
+  };
+
+  emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_CON, templateParams)
+    .then(() => {
+      appt.status = 'approved';
+      appt.meetLink = meetLink;
+      saveAppointments(list);
+      renderAppointments();
+      renderStats();
+      closeModal();
+      alert('Meet link sent successfully to ' + appt.email);
+    })
+    .catch(err => {
+      console.error(err);
+      alert('Failed to send email. Check your EmailJS configuration.');
+    })
+    .finally(() => {
+      sendBtn.textContent = 'Send Meet Link';
+      sendBtn.disabled = false;
+    });
+}
+
+// ── SCHEDULE EDITOR ──
+function renderScheduleEditor() {
+  // Show the locally-cached schedule instantly, then refresh from the live
+  // Google Sheet backend (the same one the public booking page reads) so the
+  // editor reflects what's actually live, not just what's in this browser.
+  renderScheduleEditorFrom(getSchedule());
+  fetch(APPS_SCRIPT_URL + '?action=getSchedule')
+    .then(r => r.json())
+    .then(res => {
+      if (res.ok && res.schedule) {
+        localStorage.setItem('appt_schedule', JSON.stringify(res.schedule));
+        renderScheduleEditorFrom(res.schedule);
+      }
+    })
+    .catch(() => {}); // keep showing the local copy if offline
+}
+function renderScheduleEditorFrom(sched) {
+  const dayOrder = [1,2,3,4,5,6,0];
+  const editor = document.getElementById('scheduleEditor');
+  editor.innerHTML = dayOrder.map(d => {
+    const day = sched[d] || { name: dayName(d), slots: [] };
+    const isOn = day.slots && day.slots.length > 0;
+    return `<div class="day-editor" id="dayeditor-${d}">
+      <div class="day-editor-header">
+        <span class="day-label">${day.name || dayName(d)}</span>
+        <label class="day-toggle">
+          <span style="margin-right:.5rem">${isOn ? 'Available' : 'Off'}</span>
+          <div class="toggle-sw ${isOn ? 'on' : ''}" id="toggle-${d}" onclick="toggleDay(${d})"></div>
+        </label>
+      </div>
+      <div class="slots-list" id="slots-${d}">
+        ${(day.slots||[]).map((s,i) => slotRowHtml(d, i, s.start, s.end)).join('')}
+      </div>
+      <button class="add-slot-btn" onclick="addSlot(${d})" ${isOn ? '' : 'style="display:none"'} id="addSlotBtn-${d}">+ Add Time Slot</button>
+    </div>`;
+  }).join('');
+}
+
+function dayName(d) {
+  return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d];
+}
+
+function slotRowHtml(d, i, start, end) {
+  return `<div class="slot-row" id="slotrow-${d}-${i}">
+    <input type="time" value="${start}" id="slotStart-${d}-${i}">
+    <span class="slot-sep">to</span>
+    <input type="time" value="${end}" id="slotEnd-${d}-${i}">
+    <button class="slot-remove" onclick="removeSlot(${d},${i})">Remove</button>
+  </div>`;
+}
+
+function toggleDay(d) {
+  const toggle = document.getElementById('toggle-'+d);
+  const slotsEl = document.getElementById('slots-'+d);
+  const addBtn = document.getElementById('addSlotBtn-'+d);
+  const isOn = toggle.classList.toggle('on');
+  toggle.previousElementSibling.textContent = isOn ? 'Available' : 'Off';
+  if (isOn) {
+    addBtn.style.display = '';
+    if (!slotsEl.children.length) addSlot(d);
+  } else {
+    slotsEl.innerHTML = '';
+    addBtn.style.display = 'none';
+  }
+}
+
+let _slotCounters = {};
+function addSlot(d) {
+  const slotsEl = document.getElementById('slots-'+d);
+  const i = (_slotCounters[d] = (_slotCounters[d]||0) + slotsEl.children.length + 1);
+  const div = document.createElement('div');
+  div.innerHTML = slotRowHtml(d, i, '09:00', '18:00');
+  slotsEl.appendChild(div.firstElementChild);
+}
+
+function removeSlot(d, i) {
+  const el = document.getElementById('slotrow-'+d+'-'+i);
+  if (el) el.remove();
+}
+
+function saveSchedule() {
+  const sched = {};
+  const dayOrder = [1,2,3,4,5,6,0];
+  dayOrder.forEach(d => {
+    const toggle = document.getElementById('toggle-'+d);
+    const isOn = toggle && toggle.classList.contains('on');
+    const slots = [];
+    if (isOn) {
+      const slotsEl = document.getElementById('slots-'+d);
+      Array.from(slotsEl.children).forEach(row => {
+        const startEl = row.querySelector('input[id^=slotStart]');
+        const endEl   = row.querySelector('input[id^=slotEnd]');
+        if (startEl && endEl && startEl.value && endEl.value) {
+          slots.push({ start: startEl.value, end: endEl.value });
+        }
+      });
+    }
+    sched[d] = { name: dayName(d), slots };
+  });
+  localStorage.setItem('appt_schedule', JSON.stringify(sched));
+
+  const notice = document.getElementById('saveNotice');
+  const btn = document.querySelector('.save-schedule-btn');
+  const originalBtnText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Saving to live site...';
+  notice.style.display = 'none';
+
+  // Google Apps Script web apps don't support CORS, so the response itself can't
+  // be read from the browser — mode:'no-cors' is required to even send the request
+  // without the fetch() promise rejecting. The request does still reach your Google
+  // Sheet; we just can't confirm success/failure from here (same trade-off the
+  // public booking page already makes for its own Apps Script calls).
+  fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    body: JSON.stringify({ action: 'saveSchedule', schedule: sched })
+  })
+    .then(() => {
+      notice.textContent = '✓ Schedule saved! Live for all visitors.';
+      notice.style.color = '';
+      notice.style.display = 'block';
+      setTimeout(() => notice.style.display = 'none', 4000);
+    })
+    .catch(() => {
+      notice.textContent = 'Saved locally, but could not reach the server to publish it — check your internet connection and try again.';
+      notice.style.color = '#dc2626';
+      notice.style.display = 'block';
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.textContent = originalBtnText;
+    });
+}
+
+function resetSchedule() {
+  if (!confirm('Reset schedule to defaults?')) return;
+  localStorage.removeItem('appt_schedule');
+  renderScheduleEditor();
+}
+
+// ══════════════════════════════════════
+//  RESEARCH / PUBLICATIONS — Firestore
+// ══════════════════════════════════════
+function renderResearchGate() {
+  const notConnected = document.getElementById('researchNotConnected');
+  const connected = document.getElementById('researchConnected');
+  if (!notConnected || !connected) return;
+  if (researchAuthed) {
+    notConnected.style.display = 'none';
+    connected.style.display = 'block';
+    renderResearchStats();
+    renderPubTable();
+  } else {
+    notConnected.style.display = 'block';
+    connected.style.display = 'none';
+  }
+}
+
+function startPubListener() {
+  if (pubUnsub || !researchDb) return;
+  pubUnsub = researchDb.collection('publications').onSnapshot(snap => {
+    pubCache = [];
+    snap.forEach(doc => pubCache.push(Object.assign({ id: doc.id }, doc.data())));
+    renderResearchStats();
+    renderPubTable();
+  }, err => console.error('Publications listener error:', err));
+}
+function stopPubListener() {
+  if (pubUnsub) { pubUnsub(); pubUnsub = null; }
+  pubCache = [];
+}
+
+function sortedPubCache() {
+  return pubCache.slice().sort((a,b) => {
+    const oa = (a.order==null?999999:a.order), ob = (b.order==null?999999:b.order);
+    if (oa !== ob) return oa - ob;
+    return (b.year||0) - (a.year||0);
+  });
+}
+
+function renderResearchStats() {
+  const total = pubCache.length;
+  const totalCitations = pubCache.reduce((s,p)=>s+(p.citationCount||0),0);
+  const featured = pubCache.filter(p=>p.featured).length;
+  const pending = pubCache.filter(pubIsPending).length;
+  document.getElementById('researchStatsGrid').innerHTML = `
+    <div class="stat-box"><div class="stat-box-num">${total}</div><div class="stat-box-label">Total Publications</div></div>
+    <div class="stat-box"><div class="stat-box-num" style="color:#F9D77B">${totalCitations}</div><div class="stat-box-label">Total Citations</div></div>
+    <div class="stat-box"><div class="stat-box-num" style="color:#86efac">${featured}</div><div class="stat-box-label">Featured</div></div>
+    <div class="stat-box"><div class="stat-box-num" style="color:${pending>0?'#fca5a5':'#86efac'}">${pending}</div><div class="stat-box-label">Pending Review</div></div>
+  `;
+}
+
+function renderPubTable() {
+  const wrap = document.getElementById('pubTableWrap');
+  if (!wrap) return;
+  const total = pubCache.length;
+  const pendingCount = pubCache.filter(pubIsPending).length;
+  const publishedCount = pubCache.filter(p => p.status === 'published' && !p.hidden).length;
+  const hiddenCount = pubCache.filter(p => p.hidden).length;
+  const filterTabsHtml = `<div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap;">
+    ${pubFilterBtn('all','All',total)}
+    ${pubFilterBtn('pending','Pending Review',pendingCount,true)}
+    ${pubFilterBtn('published','Published',publishedCount)}
+    ${pubFilterBtn('hidden','Hidden',hiddenCount)}
+  </div>`;
+
+  const list = filteredSortedPubCache();
+  const showOrderControls = _pubFilter === 'all';
+  if (!list.length) {
+    wrap.innerHTML = filterTabsHtml + `<div class="empty-state"><p>${pubCache.length ? 'No publications in this view.' : 'No publications yet. Search online, import BibTeX, or click "+ Add Publication" to get started.'}</p></div>`;
+    return;
+  }
+  wrap.innerHTML = filterTabsHtml + `<table class="appt-table">
+    <thead><tr><th>Order</th><th>Title</th><th>Venue / Year</th><th>Citations</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>
+    ${list.map((p,i) => {
+      const pending = pubIsPending(p);
+      return `<tr>
+      <td>
+        ${showOrderControls ? `
+        <div style="display:flex;flex-direction:column;gap:.2rem;">
+          <button class="slot-remove" style="background:rgba(9,124,135,.1);color:var(--teal-dark);border-color:var(--cyan);padding:.2rem .5rem;" onclick="movePublication('${p.id}',-1)" ${i===0?'disabled':''}>▲</button>
+          <button class="slot-remove" style="background:rgba(9,124,135,.1);color:var(--teal-dark);border-color:var(--cyan);padding:.2rem .5rem;" onclick="movePublication('${p.id}',1)" ${i===list.length-1?'disabled':''}>▼</button>
+        </div>` : '<span style="color:var(--muted);font-size:.8rem;">—</span>'}
+      </td>
+      <td>
+        <strong>${esc(p.title)}</strong>
+        ${p.featured ? '<span class="badge badge-approved" style="margin-left:.4rem;">Featured</span>' : ''}
+        ${p.source && p.source !== 'manual' ? `<span class="badge" style="background:rgba(9,124,135,.1);color:var(--teal-dark);border:1.5px solid var(--cyan);margin-left:.4rem;">${p.source==='bibtex'?'BibTeX':'Online Search'}</span>` : ''}
+        <div style="font-size:.78rem;color:var(--muted);margin-top:.2rem;">${esc(p.authors)}</div>
+      </td>
+      <td style="font-size:.85rem;">${esc(p.venue)}${p.year?' · '+p.year:''}</td>
+      <td>${p.citationCount || 0}</td>
+      <td>
+        ${pending
+          ? '<span class="badge badge-pending">Pending Review</span>'
+          : `<span class="badge ${p.status==='draft'?'badge-pending':'badge-approved'}">${p.status==='draft'?'Draft':'Published'}</span><br>
+             <span class="badge ${p.hidden?'badge-declined':'badge-approved'}" style="margin-top:.3rem;">${p.hidden?'Hidden':'Visible'}</span>`}
+      </td>
+      <td>
+        <div class="action-btns">
+          ${pending ? `
+            <button class="action-btn approve" onclick="approvePublication('${p.id}')">✓ Approve &amp; Publish</button>
+            <button class="action-btn send-link" onclick="openPubModal('${p.id}')">Edit</button>
+            <button class="action-btn decline" onclick="rejectPublication('${p.id}')">✗ Reject</button>
+          ` : `
+            <button class="action-btn send-link" onclick="openPubModal('${p.id}')">Edit</button>
+            <button class="action-btn approve" onclick="toggleFeatured('${p.id}')">${p.featured?'Unfeature':'Feature'}</button>
+            <button class="action-btn ${p.hidden?'approve':'decline'}" onclick="toggleHidden('${p.id}')">${p.hidden?'Show':'Hide'}</button>
+            <button class="action-btn decline" onclick="deletePublication('${p.id}')">Delete</button>
+          `}
+          ${p.doi ? `<button class="action-btn send-link" onclick="syncOnePublication('${p.id}')">⟳ Sync</button>` : ''}
+        </div>
+      </td>
+    </tr>`;
+    }).join('')}
+    </tbody>
+  </table>`;
+}
+
+function toggleImportBox() {
+  const box = document.getElementById('bibtexImportBox');
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+}
+
+// ── Add/Edit Modal ──
+let _editingPubId = null;
+function openPubModal(id) {
+  _editingPubId = id || null;
+  document.getElementById('pubModalTitle').textContent = id ? 'Edit Publication' : 'Add Publication';
+  const pub = id ? pubCache.find(p => p.id === id) : null;
+  document.getElementById('pubTitle').value = pub ? pub.title||'' : '';
+  document.getElementById('pubAuthors').value = pub ? pub.authors||'' : '';
+  document.getElementById('pubVenue').value = pub ? pub.venue||'' : '';
+  document.getElementById('pubType').value = pub ? (pub.type||'journal') : 'journal';
+  document.getElementById('pubYear').value = pub && pub.year ? pub.year : '';
+  document.getElementById('pubPages').value = pub ? pub.pages||'' : '';
+  document.getElementById('pubDoi').value = pub ? pub.doi||'' : '';
+  document.getElementById('pubUrl').value = pub ? pub.url||'' : '';
+  document.getElementById('pubPdfUrl').value = pub ? pub.pdfUrl||'' : '';
+  document.getElementById('pubAbstract').value = pub ? pub.abstract||'' : '';
+  document.getElementById('pubKeywords').value = pub && pub.keywords ? pub.keywords.join(', ') : '';
+  document.getElementById('pubCategories').value = pub && pub.categories ? pub.categories.join(', ') : '';
+  document.getElementById('pubCitationCount').value = (pub && pub.citationCount != null) ? pub.citationCount : '';
+  document.getElementById('pubFeatured').checked = !!(pub && pub.featured);
+  document.getElementById('pubHidden').checked = !!(pub && pub.hidden);
+  document.getElementById('pubStatusDraft').checked = !!(pub && pub.status === 'draft');
+  document.getElementById('pubModal').classList.add('open');
+}
+function closePubModal() {
+  document.getElementById('pubModal').classList.remove('open');
+  _editingPubId = null;
+}
+function savePublication() {
+  const title = document.getElementById('pubTitle').value.trim();
+  const authors = document.getElementById('pubAuthors').value.trim();
+  const venue = document.getElementById('pubVenue').value.trim();
+  if (!title || !authors || !venue) { alert('Title, Authors, and Venue are required.'); return; }
+  const yearVal = document.getElementById('pubYear').value;
+  const data = {
+    title, authors, venue,
+    type: document.getElementById('pubType').value,
+    year: yearVal ? parseInt(yearVal, 10) : null,
+    pages: document.getElementById('pubPages').value.trim(),
+    doi: document.getElementById('pubDoi').value.trim(),
+    url: document.getElementById('pubUrl').value.trim(),
+    pdfUrl: document.getElementById('pubPdfUrl').value.trim(),
+    abstract: document.getElementById('pubAbstract').value.trim(),
+    keywords: document.getElementById('pubKeywords').value.split(',').map(s=>s.trim()).filter(Boolean),
+    categories: document.getElementById('pubCategories').value.split(',').map(s=>s.trim()).filter(Boolean),
+    citationCount: document.getElementById('pubCitationCount').value ? parseInt(document.getElementById('pubCitationCount').value,10) : 0,
+    featured: document.getElementById('pubFeatured').checked,
+    hidden: document.getElementById('pubHidden').checked,
+    status: document.getElementById('pubStatusDraft').checked ? 'draft' : 'published',
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  const saveBtn = document.querySelector('#pubModal .modal-btn.send');
+  saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
+  let p;
+  if (_editingPubId) {
+    p = researchDb.collection('publications').doc(_editingPubId).update(data);
+  } else {
+    data.order = pubCache.reduce((m,x)=>Math.max(m,x.order||0),0) + 1;
+    data.source = 'manual';
+    data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    p = researchDb.collection('publications').add(data);
+  }
+  p.then(() => { closePubModal(); })
+   .catch(err => alert('Save failed: ' + err.message))
+   .finally(() => { saveBtn.disabled = false; saveBtn.textContent = 'Save Publication'; });
+}
+function deletePublication(id) {
+  const pub = pubCache.find(p => p.id === id);
+  if (!confirm('Delete "' + (pub?pub.title:'this publication') + '"? This cannot be undone.')) return;
+  researchDb.collection('publications').doc(id).delete();
+}
+function toggleFeatured(id) {
+  const pub = pubCache.find(p => p.id === id);
+  if (!pub) return;
+  researchDb.collection('publications').doc(id).update({ featured: !pub.featured, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+}
+function toggleHidden(id) {
+  const pub = pubCache.find(p => p.id === id);
+  if (!pub) return;
+  researchDb.collection('publications').doc(id).update({ hidden: !pub.hidden, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+}
+function movePublication(id, dir) {
+  const list = sortedPubCache();
+  const idx = list.findIndex(p => p.id === id);
+  const swapIdx = idx + dir;
+  if (idx === -1 || swapIdx < 0 || swapIdx >= list.length) return;
+  const a = list[idx], b = list[swapIdx];
+  const orderA = a.order==null ? idx : a.order;
+  const orderB = b.order==null ? swapIdx : b.order;
+  const batch = researchDb.batch();
+  batch.update(researchDb.collection('publications').doc(a.id), { order: orderB });
+  batch.update(researchDb.collection('publications').doc(b.id), { order: orderA });
+  batch.commit();
+}
+
+// ── BibTeX Import (e.g. pasted from your Google Scholar profile's "Export → BibTeX") ──
+function parseBibtex(text) {
+  const entries = [];
+  const chunks = text.split(/(?=@\w+\s*\{)/).map(s=>s.trim()).filter(Boolean);
+  chunks.forEach(chunk => {
+    const headerMatch = chunk.match(/^@(\w+)\s*\{\s*([^,]*),/);
+    if (!headerMatch) return;
+    const type = headerMatch[1].toLowerCase();
+    let rest = chunk.slice(headerMatch[0].length).replace(/\}\s*$/, '');
+    const fields = {};
+    let i = 0;
+    while (i < rest.length) {
+      while (i < rest.length && /[\s,]/.test(rest[i])) i++;
+      const nameMatch = rest.slice(i).match(/^([a-zA-Z]+)\s*=\s*/);
+      if (!nameMatch) break;
+      const fname = nameMatch[1].toLowerCase();
+      i += nameMatch[0].length;
+      let value = '';
+      if (rest[i] === '{') {
+        let depth = 0, start = i;
+        for (; i < rest.length; i++) {
+          if (rest[i] === '{') depth++;
+          else if (rest[i] === '}') { depth--; if (depth === 0) { i++; break; } }
+        }
+        value = rest.slice(start+1, i-1);
+      } else if (rest[i] === '"') {
+        let start = ++i;
+        while (i < rest.length && rest[i] !== '"') i++;
+        value = rest.slice(start, i);
+        i++;
+      } else {
+        let start = i;
+        while (i < rest.length && rest[i] !== ',') i++;
+        value = rest.slice(start, i).trim();
+      }
+      fields[fname] = value.replace(/\s+/g,' ').trim();
+    }
+    entries.push({ type, fields });
+  });
+  return entries;
+}
+
+function importBibtex() {
+  const raw = document.getElementById('bibtexInput').value;
+  const entries = parseBibtex(raw);
+  const resultEl = document.getElementById('bibtexResult');
+  if (!entries.length) { resultEl.textContent = 'No valid BibTeX entries found.'; return; }
+  if (!researchDb) { resultEl.textContent = 'Research backend not connected.'; return; }
+  const maxOrder = pubCache.reduce((m,p)=>Math.max(m, p.order||0), 0);
+  const batch = researchDb.batch();
+  entries.forEach((e, idx) => {
+    const f = e.fields;
+    let authors = (f.author || '').split(' and ').map(a=>{
+      const parts = a.split(',').map(s=>s.trim());
+      return parts.length===2 ? (parts[1]+' '+parts[0]) : a.trim();
+    }).join(', ');
+    const docRef = researchDb.collection('publications').doc();
+    batch.set(docRef, {
+      title: f.title || '(untitled)',
+      authors: authors,
+      venue: f.journal || f.booktitle || f.publisher || '',
+      type: e.type === 'inproceedings' ? 'conference' : (e.type === 'article' ? 'journal' : 'other'),
+      year: f.year ? parseInt(f.year, 10) : null,
+      pages: (f.pages||'').replace(/--/g,'–'),
+      doi: f.doi || '',
+      url: f.url || '',
+      pdfUrl: '',
+      abstract: f.abstract || '',
+      keywords: f.keywords ? f.keywords.split(/[;,]/).map(k=>k.trim()).filter(Boolean) : [],
+      categories: [],
+      citationCount: 0,
+      status: 'draft',
+      featured: false,
+      hidden: true,
+      order: maxOrder + idx + 1,
+      source: 'bibtex',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  });
+  batch.commit().then(() => {
+    resultEl.textContent = `Added ${entries.length} publication(s) as hidden drafts — review and publish them in the table below.`;
+    document.getElementById('bibtexInput').value = '';
+  }).catch(err => { resultEl.textContent = 'Error: ' + err.message; });
+}
+
+// ── Semantic Scholar citation/metadata sync (legal, free, CORS-enabled public API) ──
+async function fetchSemanticScholarByDoi(doi) {
+  const cleanDoi = doi.replace(/^https?:\/\/(dx\.)?doi\.org\//i, '');
+  const resp = await fetch(`https://api.semanticscholar.org/graph/v1/paper/DOI:${encodeURIComponent(cleanDoi)}?fields=venue,year,citationCount,abstract,externalIds`);
+  if (!resp.ok) throw new Error('Not found (HTTP ' + resp.status + ')');
+  return resp.json();
+}
+function syncOnePublication(id) {
+  const pub = pubCache.find(p => p.id === id);
+  if (!pub || !pub.doi) { alert('This publication has no DOI to sync against Semantic Scholar.'); return; }
+  fetchSemanticScholarByDoi(pub.doi).then(data => {
+    const updates = { citationCount: data.citationCount || 0, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+    if (!pub.abstract && data.abstract) updates.abstract = data.abstract;
+    if (!pub.venue && data.venue) updates.venue = data.venue;
+    return researchDb.collection('publications').doc(id).update(updates);
+  }).then(() => {
+    alert('Citation data synced for "' + pub.title + '".');
+  }).catch(err => alert('Sync failed: ' + err.message));
+}
+async function syncAllCitations() {
+  const withDoi = pubCache.filter(p => p.doi);
+  if (!withDoi.length) { alert('No publications with a DOI to sync.'); return; }
+  let okCount = 0, failCount = 0;
+  for (const pub of withDoi) {
+    try {
+      const data = await fetchSemanticScholarByDoi(pub.doi);
+      const updates = { citationCount: data.citationCount || 0, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+      if (!pub.abstract && data.abstract) updates.abstract = data.abstract;
+      if (!pub.venue && data.venue) updates.venue = data.venue;
+      await researchDb.collection('publications').doc(pub.id).update(updates);
+      okCount++;
+    } catch (e) { failCount++; }
+    await new Promise(r => setTimeout(r, 400));
+  }
+  alert(`Citation sync complete: ${okCount} updated, ${failCount} failed/skipped.`);
+}
+
+// ── Pending Review workflow ──
+function pubIsPending(p) { return !!p.hidden && p.status === 'draft'; }
+
+function approvePublication(id) {
+  researchDb.collection('publications').doc(id).update({
+    hidden: false, status: 'published', updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+function rejectPublication(id) {
+  const pub = pubCache.find(p => p.id === id);
+  if (!confirm('Reject and permanently delete "' + (pub?pub.title:'this item') + '"?')) return;
+  researchDb.collection('publications').doc(id).delete();
+}
+
+let _pubFilter = 'all';
+function setPubFilter(f) { _pubFilter = f; renderPubTable(); }
+
+function filteredSortedPubCache() {
+  const list = sortedPubCache();
+  if (_pubFilter === 'pending')   return list.filter(pubIsPending);
+  if (_pubFilter === 'published') return list.filter(p => p.status === 'published' && !p.hidden);
+  if (_pubFilter === 'hidden')    return list.filter(p => p.hidden);
+  return list;
+}
+function pubFilterBtn(key, label, count, warn) {
+  const active = _pubFilter === key;
+  const bg     = active ? 'var(--teal)' : (warn && count > 0 ? 'rgba(249,215,123,.25)' : '#fff');
+  const color  = active ? '#fff' : (warn && count > 0 ? '#b45309' : 'var(--muted)');
+  const border = active ? 'var(--teal)' : (warn && count > 0 ? '#F9D77B' : 'var(--border)');
+  return `<button onclick="setPubFilter('${key}')" style="padding:.5rem 1.1rem;border-radius:50px;border:2px solid ${border};background:${bg};color:${color};font-size:.82rem;font-weight:700;cursor:pointer;">${esc(label)} (${count})</button>`;
+}
+
+// ── Real-time online search & import (Semantic Scholar) ──
+let _searchMode = 'author';
+let _searchDebounceTimer = null;
+let _searchResults = [];
+let _authorCandidates = [];
+
+function toggleSearchBox() {
+  const box = document.getElementById('onlineSearchBox');
+  const show = box.style.display === 'none';
+  box.style.display = show ? 'block' : 'none';
+  if (show && document.getElementById('onlineSearchInput').value.trim() === '') {
+    document.getElementById('onlineSearchInput').value = 'Md Hasibuzzaman';
+    onSearchInput();
+  }
+}
+
+function setSearchMode(mode) {
+  _searchMode = mode;
+  const authorBtn = document.getElementById('searchModeAuthorBtn');
+  const keywordBtn = document.getElementById('searchModeKeywordBtn');
+  const activeStyle   = 'border:2px solid var(--cyan);background:var(--teal);color:#fff;border-radius:8px;padding:.5rem 1rem;font-size:.85rem;font-weight:700;cursor:pointer;';
+  const inactiveStyle = 'border:2px solid var(--border);background:#fff;color:var(--muted);border-radius:8px;padding:.5rem 1rem;font-size:.85rem;font-weight:700;cursor:pointer;';
+  authorBtn.style.cssText  = mode === 'author'  ? activeStyle : inactiveStyle;
+  keywordBtn.style.cssText = mode === 'keyword' ? activeStyle : inactiveStyle;
+  document.getElementById('onlineSearchInput').placeholder = mode === 'author' ? 'Search by author name…' : 'Search by title or keywords…';
+  document.getElementById('onlineSearchResults').innerHTML = '';
+  _authorCandidates = []; _searchResults = [];
+  if (document.getElementById('onlineSearchInput').value.trim().length >= 3) onSearchInput();
+}
+
+function onSearchInput() {
+  clearTimeout(_searchDebounceTimer);
+  const q = document.getElementById('onlineSearchInput').value.trim();
+  const resultsEl = document.getElementById('onlineSearchResults');
+  if (q.length < 3) { resultsEl.innerHTML = '<div class="pub-empty">Type at least 3 characters…</div>'; return; }
+  resultsEl.innerHTML = '<div class="pub-loading">Searching…</div>';
+  _searchDebounceTimer = setTimeout(() => {
+    if (_searchMode === 'author') searchAuthors(q); else searchPapers(q);
+  }, 450);
+}
+
+async function searchAuthors(q) {
+  const resultsEl = document.getElementById('onlineSearchResults');
+  try {
+    const resp = await fetch(`https://api.semanticscholar.org/graph/v1/author/search?query=${encodeURIComponent(q)}&fields=name,affiliations,paperCount,citationCount,papers.title,papers.year`);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    _authorCandidates = (data.data || []).sort((a,b) => (b.citationCount||0) - (a.citationCount||0));
+    renderAuthorCandidates();
+  } catch (e) {
+    resultsEl.innerHTML = `<div class="pub-empty">Search failed: ${esc(e.message)}</div>`;
+  }
+}
+
+function renderAuthorCandidates() {
+  const wrap = document.getElementById('onlineSearchResults');
+  if (!_authorCandidates.length) { wrap.innerHTML = '<div class="pub-empty">No matching authors found.</div>'; return; }
+  wrap.innerHTML = `<p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem;">Common names often match multiple unrelated researchers — check the sample titles below to confirm it's you before choosing one.</p>` +
+    _authorCandidates.map((a, i) => {
+      const samples = (a.papers||[]).slice(0,3).map(p => p.title).filter(Boolean);
+      return `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem;flex-wrap:wrap;padding:.7rem 1rem;border:1px solid var(--border);border-radius:10px;margin-bottom:.5rem;background:#fff;">
+      <div style="flex:1;min-width:0;">
+        <strong>${esc(a.name)}</strong>
+        <div style="font-size:.78rem;color:var(--muted);margin-top:.15rem;">${esc((a.affiliations||[]).join(', ')) || 'No affiliation listed'} &nbsp;·&nbsp; ${a.paperCount||0} papers &nbsp;·&nbsp; ${a.citationCount||0} citations</div>
+        ${samples.length ? `<ul style="margin:.4rem 0 0 1.1rem;padding:0;font-size:.78rem;color:#555;">${samples.map(t=>`<li style="margin-bottom:.15rem;">${esc(t)}</li>`).join('')}</ul>` : ''}
+      </div>
+      <button class="action-btn send-link" onclick="loadAuthorPapers(${i})">View Papers</button>
+    </div>
+  `;}).join('');
+}
+
+async function loadAuthorPapers(idx) {
+  const author = _authorCandidates[idx];
+  if (!author) return;
+  const wrap = document.getElementById('onlineSearchResults');
+  wrap.innerHTML = '<div class="pub-loading">Loading publications…</div>';
+  try {
+    const resp = await fetch(`https://api.semanticscholar.org/graph/v1/author/${author.authorId}/papers?fields=title,venue,year,citationCount,abstract,externalIds,authors,url&limit=100`);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    _searchResults = data.data || [];
+    renderSearchResults();
+  } catch (e) {
+    wrap.innerHTML = `<div class="pub-empty">Failed to load papers: ${esc(e.message)}</div>`;
+  }
+}
+
+async function searchPapers(q) {
+  const resultsEl = document.getElementById('onlineSearchResults');
+  try {
+    const resp = await fetch(`https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(q)}&fields=title,venue,year,citationCount,abstract,externalIds,authors,url&limit=20`);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    _searchResults = data.data || [];
+    renderSearchResults();
+  } catch (e) {
+    resultsEl.innerHTML = `<div class="pub-empty">Search failed: ${esc(e.message)}</div>`;
+  }
+}
+
+function findExistingMatch(paper) {
+  const doi = ((paper.externalIds && paper.externalIds.DOI) || '').toLowerCase();
+  return pubCache.find(p =>
+    (p.semanticScholarId && p.semanticScholarId === paper.paperId) ||
+    (doi && p.doi && p.doi.toLowerCase().replace(/^https?:\/\/(dx\.)?doi\.org\//,'') === doi)
+  );
+}
+
+function renderSearchResults() {
+  const wrap = document.getElementById('onlineSearchResults');
+  if (!_searchResults.length) { wrap.innerHTML = '<div class="pub-empty">No results found.</div>'; return; }
+  wrap.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;flex-wrap:wrap;gap:.5rem;">
+      <label style="font-size:.82rem;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:.4rem;">
+        <input type="checkbox" onclick="toggleAllSearchResults(this)"> Select All
+      </label>
+      <button class="action-btn send-link" onclick="importSelectedSearchResults()">Import Selected</button>
+    </div>
+    ${_searchResults.map((p, i) => {
+      const existing = findExistingMatch(p);
+      const authors = (p.authors||[]).map(a => a.name).join(', ');
+      const doi = p.externalIds && p.externalIds.DOI;
+      return `<div class="srch-result-row" style="display:flex;gap:.75rem;align-items:flex-start;padding:.8rem 1rem;border:1px solid var(--border);border-radius:10px;margin-bottom:.5rem;background:#fff;">
+        <input type="checkbox" class="srch-result-check" data-idx="${i}" style="margin-top:.3rem;width:16px;height:16px;flex-shrink:0;" ${existing?'disabled':''}>
+        <div style="flex:1;min-width:0;">
+          <strong>${esc(p.title)}</strong>
+          ${existing ? '<span class="badge badge-approved" style="margin-left:.5rem;">Already Imported</span>' : ''}
+          <div style="font-size:.8rem;color:var(--muted);margin-top:.2rem;">${esc(authors)}</div>
+          <div style="font-size:.78rem;color:var(--muted);">${esc(p.venue||'')}${p.year?' · '+p.year:''} &nbsp;·&nbsp; ${p.citationCount||0} citations${doi?' &nbsp;·&nbsp; DOI: '+esc(doi):''}</div>
+        </div>
+        ${!existing ? `<button class="action-btn send-link" onclick="importSingleSearchResult(${i})">Import</button>` : ''}
+      </div>`;
+    }).join('')}
+    <div id="searchImportResult" style="margin-top:.5rem;font-size:.85rem;color:var(--teal-dark);font-weight:700;"></div>
+  `;
+}
+
+function toggleAllSearchResults(cb) {
+  document.querySelectorAll('.srch-result-check:not(:disabled)').forEach(el => el.checked = cb.checked);
+}
+
+function paperToPubDoc(paper, order) {
+  const doi = (paper.externalIds && paper.externalIds.DOI) || '';
+  const authors = (paper.authors||[]).map(a => a.name).join(', ');
+  return {
+    title: paper.title || '(untitled)',
+    authors,
+    venue: paper.venue || '',
+    type: 'journal',
+    year: paper.year || null,
+    pages: '',
+    doi,
+    url: paper.url || (doi ? ('https://doi.org/' + doi) : ''),
+    pdfUrl: '',
+    abstract: paper.abstract || '',
+    keywords: [],
+    categories: [],
+    citationCount: paper.citationCount || 0,
+    featured: false,
+    hidden: true,
+    status: 'draft',
+    order,
+    source: 'semantic_scholar_search',
+    semanticScholarId: paper.paperId || null,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+}
+
+function importSingleSearchResult(idx) {
+  const paper = _searchResults[idx];
+  if (!paper) return;
+  const maxOrder = pubCache.reduce((m,p)=>Math.max(m,p.order||0),0);
+  researchDb.collection('publications').add(paperToPubDoc(paper, maxOrder + 1)).then(() => {
+    const row = document.querySelector(`.srch-result-check[data-idx="${idx}"]`)?.closest('.srch-result-row');
+    if (row) { row.style.opacity = '.5'; row.querySelector('button')?.remove(); }
+    const resEl = document.getElementById('searchImportResult');
+    if (resEl) resEl.textContent = 'Imported "' + paper.title + '" as pending review.';
+  }).catch(err => alert('Import failed: ' + err.message));
+}
+
+function importSelectedSearchResults() {
+  const checks = Array.from(document.querySelectorAll('.srch-result-check:checked:not(:disabled)'));
+  if (!checks.length) { alert('Select at least one result to import.'); return; }
+  const maxOrder = pubCache.reduce((m,p)=>Math.max(m,p.order||0),0);
+  const batch = researchDb.batch();
+  checks.forEach((cb, i) => {
+    const paper = _searchResults[parseInt(cb.dataset.idx,10)];
+    if (!paper) return;
+    batch.set(researchDb.collection('publications').doc(), paperToPubDoc(paper, maxOrder + i + 1));
+  });
+  batch.commit().then(() => {
+    const resEl = document.getElementById('searchImportResult');
+    if (resEl) resEl.textContent = `Imported ${checks.length} publication(s) as pending review.`;
+    checks.forEach(cb => { cb.disabled = true; const row = cb.closest('.srch-result-row'); if (row) row.style.opacity = '.5'; });
+  }).catch(err => {
+    const resEl = document.getElementById('searchImportResult');
+    if (resEl) resEl.textContent = 'Import failed: ' + err.message;
+  });
+}
+
+// ══════════════════════════════════════
+//  SITE CONTENT — Firestore 'site' collection
+//  (Hero, About, Contact, Education, Experience, Awards, Skills, Certificates)
+// ══════════════════════════════════════
+const SITE_DOC_IDS = ['hero','about','contact','education','experience','awards','skills','certificates'];
+
+function renderSiteGate() {
+  const notConnected = document.getElementById('siteNotConnected');
+  const connected = document.getElementById('siteConnected');
+  if (!notConnected || !connected) return;
+  if (researchAuthed) {
+    notConnected.style.display = 'none';
+    connected.style.display = 'block';
+    startSiteListeners();
+  } else {
+    notConnected.style.display = 'block';
+    connected.style.display = 'none';
+    stopSiteListeners();
+  }
+}
+
+function startSiteListeners() {
+  if (!researchDb || Object.keys(siteUnsubs).length) return;
+  SITE_DOC_IDS.forEach(renderSiteSectionForm); // render defaults immediately, before snapshots arrive
+  SITE_DOC_IDS.forEach(docId => {
+    siteUnsubs[docId] = researchDb.collection('site').doc(docId).onSnapshot(snap => {
+      siteCache[docId] = snap.exists ? snap.data() : null;
+      renderSiteSectionForm(docId);
+    }, err => console.error('Site listener error (' + docId + '):', err));
+  });
+}
+function stopSiteListeners() {
+  Object.values(siteUnsubs).forEach(unsub => unsub());
+  siteUnsubs = {};
+  siteCache = {};
+}
+function siteData(docId) {
+  return siteCache[docId] || DEFAULT_SITE_CONTENT[docId];
+}
+function siteSavedMsg(docId) {
+  const el = document.getElementById('siteSaveMsg-' + docId);
+  if (!el) return;
+  el.textContent = '✓ Saved — live on your website now';
+  setTimeout(() => { el.textContent = ''; }, 3000);
+}
+
+function showSiteSection(name, btn) {
+  document.querySelectorAll('.site-section-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.site-subnav-btn').forEach(b => b.classList.remove('active'));
+  const panel = document.getElementById('siteSection-' + name);
+  if (panel) panel.style.display = 'block';
+  if (btn) btn.classList.add('active');
+}
+
+function renderSiteSectionForm(docId) {
+  if (docId === 'hero') renderHeroForm();
+  else if (docId === 'about') renderAboutForm();
+  else if (docId === 'contact') renderContactForm();
+  else if (docId === 'education') { renderListSection('education','items'); renderListSection('education','exchangePrograms'); }
+  else if (docId === 'experience') renderListSection('experience','items');
+  else if (docId === 'awards') renderListSection('awards','items');
+  else if (docId === 'skills') renderListSection('skills','items');
+  else if (docId === 'certificates') renderCertificatesListSection();
+}
+
+// ── Hero ──
+function renderHeroForm() {
+  const d = siteData('hero');
+  document.getElementById('heroName').value = d.name || '';
+  document.getElementById('heroTagline').value = d.tagline || '';
+  document.getElementById('heroMission').value = d.mission || '';
+  document.getElementById('heroInstitution').value = d.institution || '';
+  document.getElementById('heroScholarUrl').value = d.scholarUrl || '';
+  document.getElementById('heroLinkedinUrl').value = d.linkedinUrl || '';
+}
+function saveHero() {
+  const data = {
+    name: document.getElementById('heroName').value.trim(),
+    tagline: document.getElementById('heroTagline').value.trim(),
+    mission: document.getElementById('heroMission').value.trim(),
+    institution: document.getElementById('heroInstitution').value.trim(),
+    scholarUrl: document.getElementById('heroScholarUrl').value.trim(),
+    linkedinUrl: document.getElementById('heroLinkedinUrl').value.trim(),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  researchDb.collection('site').doc('hero').set(data, { merge: true })
+    .then(() => siteSavedMsg('hero')).catch(err => alert('Save failed: ' + err.message));
+}
+
+// ── About ──
+function renderAboutForm() {
+  const d = siteData('about');
+  document.getElementById('aboutParagraphs').value = (d.paragraphs || []).join('\n\n');
+}
+function saveAbout() {
+  const paragraphs = document.getElementById('aboutParagraphs').value.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  researchDb.collection('site').doc('about').set({ paragraphs, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
+    .then(() => siteSavedMsg('about')).catch(err => alert('Save failed: ' + err.message));
+}
+
+// ── Contact ──
+function renderContactForm() {
+  const d = siteData('contact');
+  document.getElementById('contactEmail').value = d.email || '';
+  document.getElementById('contactNtpuEmail').value = d.ntpuEmail || '';
+  document.getElementById('contactPhone').value = d.phone || '';
+  document.getElementById('contactLinkedinUrl').value = d.linkedinUrl || '';
+  document.getElementById('contactGithubUrl').value = d.githubUrl || '';
+  document.getElementById('contactScholarUrl').value = d.scholarUrl || '';
+  document.getElementById('contactResearchgateUrl').value = d.researchgateUrl || '';
+  document.getElementById('contactOrcidUrl').value = d.orcidUrl || '';
+  document.getElementById('contactWosUrl').value = d.wosUrl || '';
+}
+function saveContact() {
+  const data = {
+    email: document.getElementById('contactEmail').value.trim(),
+    ntpuEmail: document.getElementById('contactNtpuEmail').value.trim(),
+    phone: document.getElementById('contactPhone').value.trim(),
+    linkedinUrl: document.getElementById('contactLinkedinUrl').value.trim(),
+    githubUrl: document.getElementById('contactGithubUrl').value.trim(),
+    scholarUrl: document.getElementById('contactScholarUrl').value.trim(),
+    researchgateUrl: document.getElementById('contactResearchgateUrl').value.trim(),
+    orcidUrl: document.getElementById('contactOrcidUrl').value.trim(),
+    wosUrl: document.getElementById('contactWosUrl').value.trim(),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  researchDb.collection('site').doc('contact').set(data, { merge: true })
+    .then(() => siteSavedMsg('contact')).catch(err => alert('Save failed: ' + err.message));
+}
+
+// ── Generic list sections (Education degrees/exchange, Experience, Awards, Skills) ──
+const LIST_SCHEMAS = {
+  'education.items': {
+    title: 'Degree',
+    fields: [
+      { key:'degree', label:'Degree', type:'text' },
+      { key:'institution', label:'Institution', type:'text' },
+      { key:'period', label:'Period', type:'text' },
+      { key:'note', label:'Note (score / GPA / lab, optional)', type:'text' }
+    ],
+    rowTitle: it => it.degree, rowSub: it => [it.institution, it.period].filter(Boolean).join(' · ')
+  },
+  'education.exchangePrograms': {
+    title: 'Exchange Program',
+    fields: [
+      { key:'title', label:'Title', type:'text' },
+      { key:'period', label:'Period', type:'text' }
+    ],
+    rowTitle: it => it.title, rowSub: it => it.period
+  },
+  'experience.items': {
+    title: 'Experience Entry',
+    fields: [
+      { key:'role', label:'Role', type:'text' },
+      { key:'org', label:'Organization', type:'text' },
+      { key:'period', label:'Period', type:'text' },
+      { key:'bullets', label:'Bullet Points (one per line)', type:'lines' }
+    ],
+    rowTitle: it => it.role, rowSub: it => [it.org, it.period].filter(Boolean).join(' · ')
+  },
+  'awards.items': {
+    title: 'Award',
+    fields: [
+      { key:'title', label:'Title', type:'text' },
+      { key:'org', label:'Organization', type:'text' },
+      { key:'period', label:'Period / Year', type:'text' },
+      { key:'description', label:'Description', type:'textarea' }
+    ],
+    rowTitle: it => it.title, rowSub: it => [it.org, it.period].filter(Boolean).join(' · ')
+  },
+  'skills.items': {
+    title: 'Skill Group',
+    fields: [
+      { key:'category', label:'Category Name', type:'text' },
+      { key:'skills', label:'Skills (comma-separated)', type:'csv' }
+    ],
+    rowTitle: it => it.category, rowSub: it => (it.skills || []).join(', ')
+  }
+};
+
+function getListArray(docId, arrayKey) {
+  const d = siteData(docId) || {};
+  return (d[arrayKey] || []).slice();
+}
+
+function renderListSection(docId, arrayKey) {
+  const wrap = document.getElementById(`listWrap-${docId}-${arrayKey}`);
+  if (!wrap) return;
+  const schema = LIST_SCHEMAS[`${docId}.${arrayKey}`];
+  const list = getListArray(docId, arrayKey);
+  if (!list.length) { wrap.innerHTML = `<p style="font-size:.85rem;color:var(--muted);margin-bottom:.8rem;">Nothing here yet.</p>`; return; }
+  wrap.innerHTML = list.map((it, i) => `
+    <div class="site-list-row">
+      <div class="site-list-row-body">
+        <strong>${esc(schema.rowTitle(it) || '(untitled)')}</strong>
+        <span>${esc(schema.rowSub(it) || '')}</span>
+      </div>
+      <div class="site-list-row-actions">
+        <button class="slot-remove" style="background:rgba(9,124,135,.1);color:var(--teal-dark);border-color:var(--cyan);padding:.3rem .6rem;" onclick="moveListItem('${docId}','${arrayKey}',${i},-1)" ${i===0?'disabled':''}>▲</button>
+        <button class="slot-remove" style="background:rgba(9,124,135,.1);color:var(--teal-dark);border-color:var(--cyan);padding:.3rem .6rem;" onclick="moveListItem('${docId}','${arrayKey}',${i},1)" ${i===list.length-1?'disabled':''}>▼</button>
+        <button class="action-btn send-link" onclick="openListItemModal('${docId}','${arrayKey}',${i})">Edit</button>
+        <button class="action-btn decline" onclick="deleteListItem('${docId}','${arrayKey}',${i})">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+let _listModalCtx = null;
+function openListItemModal(docId, arrayKey, index) {
+  const schema = LIST_SCHEMAS[`${docId}.${arrayKey}`];
+  if (!schema) return;
+  _listModalCtx = { docId, arrayKey, index: (index === undefined ? null : index) };
+  const list = getListArray(docId, arrayKey);
+  const item = _listModalCtx.index != null ? list[_listModalCtx.index] : {};
+  document.getElementById('listItemModalTitle').textContent = (_listModalCtx.index != null ? 'Edit ' : 'Add ') + schema.title;
+  document.getElementById('listItemModalFields').innerHTML = schema.fields.map(f => {
+    const raw = item[f.key];
+    if (f.type === 'textarea') return `<div class="modal-form-group"><label>${esc(f.label)}</label><textarea id="lf-${f.key}" style="min-height:90px;">${esc(raw||'')}</textarea></div>`;
+    if (f.type === 'lines') return `<div class="modal-form-group"><label>${esc(f.label)}</label><textarea id="lf-${f.key}" style="min-height:100px;">${esc((raw||[]).join('\n'))}</textarea></div>`;
+    if (f.type === 'csv') return `<div class="modal-form-group"><label>${esc(f.label)}</label><input type="text" id="lf-${f.key}" value="${esc((raw||[]).join(', '))}"></div>`;
+    return `<div class="modal-form-group"><label>${esc(f.label)}</label><input type="text" id="lf-${f.key}" value="${esc(raw||'')}"></div>`;
+  }).join('');
+  document.getElementById('listItemModal').classList.add('open');
+}
+function closeListItemModal() {
+  document.getElementById('listItemModal').classList.remove('open');
+  _listModalCtx = null;
+}
+function saveListItem() {
+  if (!_listModalCtx) return;
+  const { docId, arrayKey, index } = _listModalCtx;
+  const schema = LIST_SCHEMAS[`${docId}.${arrayKey}`];
+  const item = {};
+  schema.fields.forEach(f => {
+    const el = document.getElementById('lf-' + f.key);
+    if (!el) return;
+    if (f.type === 'lines') item[f.key] = el.value.split('\n').map(s => s.trim()).filter(Boolean);
+    else if (f.type === 'csv') item[f.key] = el.value.split(',').map(s => s.trim()).filter(Boolean);
+    else item[f.key] = el.value.trim();
+  });
+  const list = getListArray(docId, arrayKey);
+  if (index != null) list[index] = item; else list.push(item);
+  researchDb.collection('site').doc(docId).set({ [arrayKey]: list, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
+    .then(() => { closeListItemModal(); })
+    .catch(err => alert('Save failed: ' + err.message));
+}
+function deleteListItem(docId, arrayKey, index) {
+  if (!confirm('Delete this item?')) return;
+  const list = getListArray(docId, arrayKey);
+  list.splice(index, 1);
+  researchDb.collection('site').doc(docId).set({ [arrayKey]: list, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
+    .catch(err => alert('Delete failed: ' + err.message));
+}
+function moveListItem(docId, arrayKey, index, dir) {
+  const list = getListArray(docId, arrayKey);
+  const j = index + dir;
+  if (j < 0 || j >= list.length) return;
+  const tmp = list[index]; list[index] = list[j]; list[j] = tmp;
+  researchDb.collection('site').doc(docId).set({ [arrayKey]: list, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
+    .catch(err => alert('Reorder failed: ' + err.message));
+}
+
+// ── Certificates (list + image upload to Firebase Storage) ──
+let _certModalIndex = null;
+let _certPendingFile = null;
+
+function renderCertificatesListSection() {
+  const wrap = document.getElementById('listWrap-certificates-items');
+  if (!wrap) return;
+  const list = getListArray('certificates', 'items');
+  if (!list.length) { wrap.innerHTML = `<p style="font-size:.85rem;color:var(--muted);margin-bottom:.8rem;">No certificates yet.</p>`; return; }
+  wrap.innerHTML = list.map((it, i) => `
+    <div class="site-list-row">
+      ${it.imageUrl ? `<img src="${esc(it.imageUrl)}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;flex-shrink:0;">` : ''}
+      <div class="site-list-row-body" style="flex:1;">
+        <strong>${esc(it.title || '(untitled)')}</strong>
+        <span>${esc(it.issuer || '')}${it.date ? ' · ' + esc(it.date) : ''}</span>
+      </div>
+      <div class="site-list-row-actions">
+        <button class="slot-remove" style="background:rgba(9,124,135,.1);color:var(--teal-dark);border-color:var(--cyan);padding:.3rem .6rem;" onclick="moveListItem('certificates','items',${i},-1)" ${i===0?'disabled':''}>▲</button>
+        <button class="slot-remove" style="background:rgba(9,124,135,.1);color:var(--teal-dark);border-color:var(--cyan);padding:.3rem .6rem;" onclick="moveListItem('certificates','items',${i},1)" ${i===list.length-1?'disabled':''}>▼</button>
+        <button class="action-btn send-link" onclick="openCertModal(${i})">Edit</button>
+        <button class="action-btn decline" onclick="deleteListItem('certificates','items',${i})">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openCertModal(index) {
+  _certModalIndex = (index === undefined ? null : index);
+  _certPendingFile = null;
+  const list = getListArray('certificates', 'items');
+  const it = _certModalIndex != null ? list[_certModalIndex] : {};
+  document.getElementById('certModalTitle').textContent = _certModalIndex != null ? 'Edit Certificate' : 'Add Certificate';
+  document.getElementById('certTitle').value = it.title || '';
+  document.getElementById('certIssuer').value = it.issuer || '';
+  document.getElementById('certDate').value = it.date || '';
+  document.getElementById('certDescription').value = it.description || '';
+  document.getElementById('certTags').value = (it.tags || []).join(', ');
+  document.getElementById('certBadge').value = it.badge || '';
+  document.getElementById('certImageFile').value = '';
+  document.getElementById('certUploadProgress').textContent = '';
+  const preview = document.getElementById('certImagePreview');
+  const previewWrap = document.getElementById('certImagePreviewWrap');
+  if (it.imageUrl) { preview.src = it.imageUrl; previewWrap.style.display = 'block'; }
+  else { previewWrap.style.display = 'none'; }
+  document.getElementById('certModal').classList.add('open');
+}
+function closeCertModal() {
+  document.getElementById('certModal').classList.remove('open');
+  _certModalIndex = null;
+  _certPendingFile = null;
+}
+document.addEventListener('change', e => {
+  if (e.target && e.target.id === 'certImageFile' && e.target.files[0]) {
+    _certPendingFile = e.target.files[0];
+    const preview = document.getElementById('certImagePreview');
+    const previewWrap = document.getElementById('certImagePreviewWrap');
+    preview.src = URL.createObjectURL(_certPendingFile);
+    previewWrap.style.display = 'block';
+  }
+});
+function saveCertificate() {
+  const title = document.getElementById('certTitle').value.trim();
+  const issuer = document.getElementById('certIssuer').value.trim();
+  if (!title || !issuer) { alert('Title and Issuer are required.'); return; }
+  const list = getListArray('certificates', 'items');
+  const existing = _certModalIndex != null ? list[_certModalIndex] : {};
+  const item = {
+    title, issuer,
+    date: document.getElementById('certDate').value.trim(),
+    description: document.getElementById('certDescription').value.trim(),
+    tags: document.getElementById('certTags').value.split(',').map(s => s.trim()).filter(Boolean),
+    badge: document.getElementById('certBadge').value.trim(),
+    imageUrl: existing.imageUrl || ''
+  };
+  const saveBtn = document.getElementById('certSaveBtn');
+  saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
+
+  const finish = () => {
+    if (_certModalIndex != null) list[_certModalIndex] = item; else list.push(item);
+    researchDb.collection('site').doc('certificates').set({ items: list, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
+      .then(() => { closeCertModal(); })
+      .catch(err => alert('Save failed: ' + err.message))
+      .finally(() => { saveBtn.disabled = false; saveBtn.textContent = 'Save Certificate'; });
+  };
+
+  if (_certPendingFile) {
+    const path = 'certificates/' + Date.now() + '_' + _certPendingFile.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
+    const ref = researchStorage.ref().child(path);
+    const task = ref.put(_certPendingFile);
+    task.on('state_changed', snap => {
+      const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+      document.getElementById('certUploadProgress').textContent = `Uploading… ${pct}%`;
+    }, err => {
+      alert('Image upload failed: ' + err.message);
+      saveBtn.disabled = false; saveBtn.textContent = 'Save Certificate';
+    }, () => {
+      task.snapshot.ref.getDownloadURL().then(url => {
+        item.imageUrl = url;
+        document.getElementById('certUploadProgress').textContent = 'Upload complete.';
+        finish();
+      });
+    });
+  } else {
+    finish();
+  }
+}
+</script>
+</body>
+</html>
