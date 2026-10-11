@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /publications/{pubId} {
+      // Public visitors (not signed in) can read any publication that is not hidden.
+      // The signed-in admin can read everything, including hidden/draft items.
+      allow read: if resource.data.hidden != true
+                  || (request.auth != null && request.auth.uid == "CKk7ndnDPSM9LqBA1GuOth0nL6E2");
+
+      // Only the admin account can create, edit, or delete publications.
+      allow create, update, delete: if request.auth != null && request.auth.uid == "CKk7ndnDPSM9LqBA1GuOth0nL6E2";
+    }
+
+    // Editable site content (Hero, About, Contact, Education, Experience, Awards, Skills, Certificates).
+    // Public can always read; only the admin account can write.
+    match /site/{sectionId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null && request.auth.uid == "CKk7ndnDPSM9LqBA1GuOth0nL6E2";
+    }
+
+  }
+}
